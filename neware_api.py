@@ -18,24 +18,40 @@ class NewareAPI:
     System with xml strings, and convenience methods to start, stop, and get the
     status and data from the channels.
     """
-    def __init__(self, ip: str, port: int, channel_map: dict) -> None:
-        """ Create TCP connection to the neware at IP address """
+    def __init__(self, ip: str, port: int, channel_map: dict):
+        """ Initialize the NewareAPI object with the IP, port, and channel map."""
         self.ip = ip
         self.port = port
         self.channel_map = channel_map
-        try:
-            self.neware_socket = socket.socket()
-            self.neware_socket.connect((self.ip, self.port))
-            connect = (
-                '<?xml version="1.0" encoding="UTF-8" ?><bts version="1.0"><cmd>connect</cmd>'
-                '<username>test</username><password>123</password><type>bfgs</type></bts>\n\n#\r\n'
-            )
-            self.command(connect)
-        except socket.error as exc:
-            print(exc)
-            raise RuntimeError(
-                f"Unable to set socket connection for {self.ip} using port {self.port}!"
-            ) from exc
+        self.neware_socket = None
+
+    def connect(self) -> None:
+        """ Establish the TCP connection """
+        self.neware_socket = socket.socket()
+        self.neware_socket.connect((self.ip, self.port))
+        connect = (
+            '<?xml version="1.0" encoding="UTF-8" ?><bts version="1.0"><cmd>connect</cmd>'
+            '<username>test</username><password>123</password><type>bfgs</type></bts>\n\n#\r\n'
+        )
+        self.command(connect)
+
+    def disconnect(self) -> None:
+        """ Close the port """
+        if self.neware_socket:
+            self.neware_socket.close()
+
+    def __enter__(self):
+        """
+        Establish the TCP connection when entering the context.
+        """
+        self.connect()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.disconnect()
+
+    def __del__(self):
+        self.disconnect()
 
     def command(self, cmd: str) -> str:
         """ Send a command to the device, and return the response. """
@@ -234,10 +250,3 @@ class NewareAPI:
             '<bts version="1.0"><cmd>getdevinfo</cmd></bts>\n\n#\r\n'
         )
         return self.command(device_info)
-
-    def close(self) -> None:
-        """ Close the port """
-        self.neware_socket.close()
-
-    def __del__(self) -> None:
-        self.close()

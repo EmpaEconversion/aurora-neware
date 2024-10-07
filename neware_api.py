@@ -10,6 +10,7 @@ import socket
 from datetime import datetime
 import pandas as pd
 import shortuuid
+import xmltodict
 
 class NewareAPI:
     """ Python API for Neware Battery Testing System
@@ -32,7 +33,7 @@ class NewareAPI:
         self.neware_socket.connect((self.ip, self.port))
         connect = (
             '<?xml version="1.0" encoding="UTF-8" ?><bts version="1.0"><cmd>connect</cmd>'
-            '<username>admin</username><password>neware</password><type>bfgs</type></bts>\n\n#\r\n'
+            '<username>admin</username><password>neware</password><type>bfgs</type></bts>'
         )
         self.command(connect)
 
@@ -56,12 +57,11 @@ class NewareAPI:
 
     def command(self, cmd: str) -> str:
         """ Send a command to the device, and return the response. """
-        self.neware_socket.send(str.encode(cmd, 'utf-8'))
+        self.neware_socket.send(str.encode(cmd+self.end_message, 'utf-8'))
         received = self.neware_socket.recv(2048).decode()
         while not received.endswith(self.end_message):  # message not yet complete
             received += self.neware_socket.recv(2048).decode()
-        print(received)
-        return received
+        return received[:-len(self.end_message)]
 
 
     def start_job(self, pipeline: str, sampleid: str, payload_xml_path: str) -> str:
@@ -84,7 +84,7 @@ class NewareAPI:
             'customfilename="" addtimewhenrepeat="0" createdirbydate="0" '
             'filetype="1" backupontime="0" backupontimeinterval="720" '
             'backupfree="0" />'
-            '</list></bts>\n\n#\r\n'
+            '</list></bts>'
         )
         return self.command(cmd)
 
@@ -103,7 +103,7 @@ class NewareAPI:
             '<bts version="1.0">\n\t<cmd>stop</cmd>\n'
             f'\t<list count = "{n_channels}">\n'
         )
-        footer = '\t</list>\n</bts>\n\n#\r\n'
+        footer = '\t</list>\n</bts>'
         cmd_string = ""
         for pipeline in pipelines:
             devid, subdevid, chlid = self.channel_map[pipeline]
@@ -123,7 +123,7 @@ class NewareAPI:
             f'<?xml version="1.0" encoding="UTF-8" ?>\n<bts version="1.0">\n\t'
             f'<cmd>getchlstatus</cmd>\n\t<list count = "{len(self.channel_map)}">\n'
         )
-        footer = '\t</list>\n</bts>\n\n#\r\n'
+        footer = '\t</list>\n</bts>'
         cmd_string = ""
         for devid, subdevid, chlid in self.channel_map.values():
             cmd_string += (
@@ -151,7 +151,7 @@ class NewareAPI:
             '<inquire ip="127.0.0.1" devtype="24" '
             f'devid="{devid}" subdevid="{subdevid}" chlid="{chlid}" '
             'aux="0" barcode="1">true</inquire>'
-            '</list></bts>\n\n#\r\n'
+            '</list></bts>'
         )
         recv_str = self.command(cmd_string)
         pattern = r'<inquire(.*?)\/>'
@@ -189,7 +189,7 @@ class NewareAPI:
                 f'subdevid="{subdevid}" '
                 f'chlid="{chlid}" '
                 f'auxid="0" testid="0" startpos="{start_pos}" count="100"/>'
-                '</bts>\n\n#\r\n'
+                '</bts>'
             )
             return_data = self.command(cmd_string)
             match = re.search(r'<list count="(\d+)">(.*?)</list>', return_data, re.DOTALL)
@@ -242,10 +242,10 @@ class NewareAPI:
         df = pd.DataFrame(data)
         df.to_csv(save_file+'.csv', index=False)
 
-    def device_info(self) -> str:
+    def device_info(self) -> dict:
         """ Get device information """
         device_info = (
             '<?xml version="1.0" encoding="UTF-8" ?>'
-            '<bts version="1.0"><cmd>getdevinfo</cmd></bts>\n\n#\r\n'
+            '<bts version="1.0"><cmd>getdevinfo</cmd></bts>'
         )
-        return self.command(device_info)
+        return xmltodict.parse(self.command(device_info))

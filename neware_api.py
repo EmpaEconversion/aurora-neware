@@ -133,7 +133,7 @@ class NewareAPI:
             )
         rspns = self.command(header+cmd_string+footer)
         if pipeline:
-            match = re.search(f'devid="{devid}" subdevid="{subdevid}" chlid="{chlid}"' + '\>(.*?)\<', rspns)
+            match = re.search(f'devid="{devid}" subdevid="{subdevid}" chlid="{chlid}"' + r'\>(.*?)\<', rspns)
             if match:
                 return match.group(1)
             else:
@@ -193,7 +193,7 @@ class NewareAPI:
                 '</bts>\n\n#\r\n'
             )
             return_data = self.command(cmd_string)
-            match = re.search('<list count="(\d+)">(.*?)</list>', return_data, re.DOTALL)
+            match = re.search(r'<list count="(\d+)">(.*?)</list>', return_data, re.DOTALL)
             if match:
                 # Extract the count and the matched text
                 count = match.group(1)

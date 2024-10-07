@@ -24,6 +24,7 @@ class NewareAPI:
         self.port = port
         self.channel_map = channel_map
         self.neware_socket = None
+        self.end_message = "\n\n#\r\n"
 
     def connect(self) -> None:
         """ Establish the TCP connection """
@@ -31,7 +32,7 @@ class NewareAPI:
         self.neware_socket.connect((self.ip, self.port))
         connect = (
             '<?xml version="1.0" encoding="UTF-8" ?><bts version="1.0"><cmd>connect</cmd>'
-            '<username>test</username><password>123</password><type>bfgs</type></bts>\n\n#\r\n'
+            '<username>admin</username><password>neware</password><type>bfgs</type></bts>\n\n#\r\n'
         )
         self.command(connect)
 
@@ -56,13 +57,11 @@ class NewareAPI:
     def command(self, cmd: str) -> str:
         """ Send a command to the device, and return the response. """
         self.neware_socket.send(str.encode(cmd, 'utf-8'))
-        data_str = ""
-        data = self.neware_socket.recv(2048)
-        data_str += str(data, encoding="utf-8")
-        while "#" not in data_str[-4:]:
-            data = self.neware_socket.recv(2048)
-            data_str += str(data, encoding="utf-8")
-        return data_str
+        received = self.neware_socket.recv(2048).decode()
+        while not received.endswith(self.end_message):  # message not yet complete
+            received += self.neware_socket.recv(2048).decode()
+        print(received)
+        return received
 
 
     def start_job(self, pipeline: str, sampleid: str, payload_xml_path: str) -> str:

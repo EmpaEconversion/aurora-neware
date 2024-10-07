@@ -57,9 +57,9 @@ class NewareAPI:
 
     def command(self, cmd: str) -> str:
         """ Send a command to the device, and return the response. """
-        self.neware_socket.send(str.encode(cmd+self.end_message, 'utf-8'))
-        received = self.neware_socket.recv(2048).decode()
-        while not received.endswith(self.end_message):  # message not yet complete
+        self.neware_socket.sendall(str.encode(cmd+self.end_message, 'utf-8'))
+        received = ""
+        while not received.endswith(self.end_message):
             received += self.neware_socket.recv(2048).decode()
         return received[:-len(self.end_message)]
 

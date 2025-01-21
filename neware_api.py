@@ -1,39 +1,86 @@
-""" Python API for Neware Battery Testing System 
+"""Python API for Neware Battery Testing System.
 
 Contains a single class NewareAPI that provides methods to interact with the
 Neware Battery Testing System.
 """
 
-import os
 import re
 import socket
-from datetime import datetime
 import pandas as pd
-import shortuuid
-import xmltodict
+import xml.etree.ElementTree as ET
+from typing import Literal
+
+def _auto_convert_type(value: str) -> int|float|str:
+    """Try to automatically convert a string to float or int."""
+    if value=='--':
+        return None
+    try:
+        if '.' in value:
+            return float(value)
+        else:
+            return int(value)
+    except ValueError:
+        return value
+    
+def _extract_from_xml(
+        xml_string: str,
+        list_name: str = 'list',
+        orient: Literal['records', 'list'] = 'records'
+    ) -> list[dict] | dict[list]:
+    """Extract elements inside <list> tags, convert to a list of dictionaries.
+
+    Args:
+        xml_string (str): raw xml string
+        list_name (str): the tag that contains the list of elements to parse
+        orient ('records' or 'list', default 'records'): whether to return a list of 
+            dictionaries (records) or convert to a dictionary of lists (list)
+
+    """
+    # Parse response XML string
+    root = ET.fromstring(xml_string)
+    # Find <list> element
+    list_element = root.find(list_name)
+    # Extract <name> elements to a list of dictionaries
+    result = []
+    for el in list_element:
+        el_dict = el.attrib
+        if el.text:
+            el_dict[el.tag] = el.text
+        result.append(el_dict)
+    result = [{k : _auto_convert_type(v) for k,v in el.items()} for el in result]
+    if orient == 'list':
+        result = _lod_to_dol(result)
+    return result
+
+def _lod_to_dol(ld: list[dict]) -> dict[list]:
+    """Convert list of dictionaries to dictionary of lists."""
+    return {k: [d[k] for d in ld] for k in ld[0]}
 
 class NewareAPI:
-    """ Python API for Neware Battery Testing System
+    """Python API for Neware Battery Testing System.
     
     Provides a method to send and receive commands to the Neware Battery Testing
     System with xml strings, and convenience methods to start, stop, and get the
     status and data from the channels.
     """
     def __init__(self, ip: str, port: int, channel_map: dict):
-        """ Initialize the NewareAPI object with the IP, port, and channel map."""
+        """Initialize the NewareAPI object with the IP, port, and channel map."""
+        # TODO store device type in channel map instead of hardcoding
         self.ip = ip
         self.port = port
         self.channel_map = channel_map
         self.neware_socket = None
-        self.end_message = "\n\n#\r\n"
+        self.start_message = '<?xml version="1.0" encoding="UTF-8" ?><bts version="1.0">'
+        self.end_message = "</bts>"
+        self.termination = "\n\n#\r\n"
 
     def connect(self) -> None:
         """ Establish the TCP connection """
         self.neware_socket = socket.socket()
         self.neware_socket.connect((self.ip, self.port))
         connect = (
-            '<?xml version="1.0" encoding="UTF-8" ?><bts version="1.0"><cmd>connect</cmd>'
-            '<username>admin</username><password>neware</password><type>bfgs</type></bts>'
+            '<cmd>connect</cmd>'
+            '<username>admin</username><password>neware</password><type>bfgs</type>'
         )
         self.command(connect)
 
@@ -43,9 +90,7 @@ class NewareAPI:
             self.neware_socket.close()
 
     def __enter__(self):
-        """
-        Establish the TCP connection when entering the context.
-        """
+        """Establish the TCP connection when entering the context."""
         self.connect()
         return self
 
@@ -56,26 +101,32 @@ class NewareAPI:
         self.disconnect()
 
     def command(self, cmd: str) -> str:
-        """ Send a command to the device, and return the response. """
-        self.neware_socket.sendall(str.encode(cmd+self.end_message, 'utf-8'))
+        """Send a command to the device, and return the response."""
+        self.neware_socket.sendall(
+            str.encode(self.start_message+cmd+self.end_message+self.termination, 'utf-8')
+        )
         received = ""
-        while not received.endswith(self.end_message):
+        while not received.endswith(self.termination):
             received += self.neware_socket.recv(2048).decode()
-        return received[:-len(self.end_message)]
-
+        return received[:-len(self.termination)]
 
     def start_job(self, pipeline: str, sampleid: str, payload_xml_path: str) -> str:
-        """ Start designated payload file on a pipeline.
+        """Start designated payload file on a pipeline.
 
-        sampleid is used as the barcode in the Neware system.
+        Args:
+            pipeline (str): pipeline to start the job on
+            sampleid (str): barcode used in Newares BTS software
+            payload_xml_path (str): path to payload file
+
+        Returns:
+            str: XML string response
+
         """
         devid, subdevid, chlid = self.channel_map[pipeline]
         cmd = (
-            '<?xml version="1.0" encoding="UTF-8" ?>'
-            '<bts version="1.0">'
             '<cmd>start</cmd>'
             '<list count="1" DBC_CAN="1">'
-            f'<start ip="127.0.0.1" devtype="24" devid="{devid}"'
+            f'<start ip="127.0.0.1" devtype="27" devid="{devid}"'
             f'subdevid="{subdevid}" '
             f'chlid="{chlid}" '
             f'barcode="{sampleid}">'
@@ -84,12 +135,12 @@ class NewareAPI:
             'customfilename="" addtimewhenrepeat="0" createdirbydate="0" '
             'filetype="1" backupontime="0" backupontimeinterval="720" '
             'backupfree="0" />'
-            '</list></bts>'
+            '</list>'
         )
         return self.command(cmd)
 
     def stop_job(self, pipelines: str|list[str]|tuple[str]) -> str:
-        """ Stop job running on pipeline(s) """
+        """Stop job running on pipeline(s)."""
         if isinstance(pipelines, str):
             n_channels = 1
             pipeline = [pipelines]
@@ -98,120 +149,108 @@ class NewareAPI:
         else:
             print("Cannot read Channel ID, make sure the type is correct.")
 
-        header = (
-            '<?xml version="1.0" encoding="UTF-8" ?>\n'
-            '<bts version="1.0">\n\t<cmd>stop</cmd>\n'
-            f'\t<list count = "{n_channels}">\n'
-        )
-        footer = '\t</list>\n</bts>'
+        header = f'<cmd>stop</cmd><list count = "{n_channels}">'
+        footer = '</list>'
         cmd_string = ""
         for pipeline in pipelines:
             devid, subdevid, chlid = self.channel_map[pipeline]
             cmd_string += (
-                f'\t\t<stop ip="127.0.0.1" devtype="24" devid="{devid}" '
+                f'\t\t<stop ip="127.0.0.1" devtype="27" devid="{devid}" '
                 f'subdevid="{subdevid}" chlid="{chlid}">true</stop>\n'
             )
         return self.command(header+cmd_string+footer)
 
-    def get_status(self, pipeline: str = '') -> str:
-        """ Get status of pipeline(s)
-        
-        Without pipeline argument, it will return status of all pipelines.
+    def get_status(self, pipelines: str | list[str] = None) -> str:
+        """Get status of pipeline(s).
+
+        Args:
+            pipelines (str|list[str], optional): list of pipeline IDs
+                if not given, all pipelines from channel map are used
+
+        Returns:
+            list[dict]: a dictionary per channel with status
+
         """
-        devid, subdevid, chlid = self.channel_map[pipeline]
+        # Make list of pipelines
+        if not pipelines:  # If no argument passed use all pipelines
+            pipelines = self.channel_map.keys()
+        if isinstance(pipelines,str):
+            pipelines = [pipelines]
+        
+        # Create and submit command XML string
+        header = f'<cmd>getchlstatus</cmd><list count = "{len(self.channel_map)}">'
+        middle = ""
+        for pipeline in pipelines:
+            devid, subdevid, chlid = self.channel_map[pipeline]
+            middle+= (
+                f'<status ip="{self.ip}" devtype="27" '
+                f'devid="{devid}" subdevid="{subdevid}" chlid="{chlid}">true</status>'
+            )
+        footer = '</list>'
+        xml_string = self.command(header+middle+footer)
+        
+        return _extract_from_xml(xml_string)
+
+    def inquire_channel(self, pipelines: str | list[str] = None) -> list[dict]:
+        """Inquire the status of the channel.
+
+        Returns useful information like device id, cycle number, step, workstatus, current, voltage,
+        time, and whether the channel is currently open.
+
+        Args:
+            pipelines (str|list[str], optional): pipeline IDs or list of pipeline Ids
+                default: None, will get all pipeline IDs in the channel map
+
+        Returns:
+            list[dict]: a dictionary per channel with the latest info and data point
+
+        """
+        # Make list of pipelines
+        if not pipelines:
+            pipelines = self.channel_map.keys()
+        if isinstance(pipelines, str):
+            pipelines = [pipelines]
+        
+        # Create and submit command XML string
         header = (
-            f'<?xml version="1.0" encoding="UTF-8" ?>\n<bts version="1.0">\n\t'
-            f'<cmd>getchlstatus</cmd>\n\t<list count = "{len(self.channel_map)}">\n'
+            '<cmd>inquire</cmd>'
+            f'<list count = "{len(self.channel_map)}">'
         )
-        footer = '\t</list>\n</bts>'
-        cmd_string = ""
-        for devid, subdevid, chlid in self.channel_map.values():
-            cmd_string += (
-                '\t\t<status ip="127.0.0.1" devtype="24" '
-                f'devid="{devid}" subdevid="{subdevid}" chlid="{chlid}">true</status>\n'
+        middle = ""
+        for pipeline in pipelines:
+            devid, subdevid, chlid = self.channel_map[pipeline]
+            middle += (
+                '<inquire ip="127.0.0.1" devtype="27" '
+                f'devid="{devid}" subdevid="{subdevid}" chlid="{chlid}"\n'
+                'aux="0" barcode="1">true</inquire>'
             )
-        rspns = self.command(header+cmd_string+footer)
-        if pipeline:
-            match = re.search(f'devid="{devid}" subdevid="{subdevid}" chlid="{chlid}"' + r'\>(.*?)\<', rspns)
-            if match:
-                return match.group(1)
-            else:
-                return rspns
-        else:
-            return rspns
+        footer = '</list>'
+        xml_string = self.command(header+middle+footer)
 
-    def inquire_channel(self, pipeline: str) -> dict:
-        """ Inquire the status of the channel """
-        # TODO how is this different from get_status?
-        devid, subdevid, chlid = self.channel_map[pipeline]
-        cmd_string = (
-            '<?xml version="1.0" encoding="UTF-8" ?>'
-            '<bts version="1.0"><cmd>inquire</cmd>'
-            '<list count = "1">'
-            '<inquire ip="127.0.0.1" devtype="24" '
-            f'devid="{devid}" subdevid="{subdevid}" chlid="{chlid}" '
-            'aux="0" barcode="1">true</inquire>'
-            '</list></bts>'
-        )
-        recv_str = self.command(cmd_string)
-        pattern = r'<inquire(.*?)\/>'
-        match = re.search(pattern, recv_str)
-        key_vals_pattern = r'(\w+)="([^"]*)"'
-        key_val_matches = re.findall(key_vals_pattern, match[0])
-        channel_status = {key: value for key, value in key_val_matches}
-        return channel_status
+        return _extract_from_xml(xml_string)
 
-    def download_data(self, pipeline: str, save_path: str = '') -> None:
-        """ Downloads the data points for chlid.
-        
+    def download_data(self, pipeline: str) -> None:
+        """Download the data points for chlid.
+
         Uses the channel map to get the device id, subdevice id, and channel id.
-        save_path must contain file name, if not given it defaults to C:/DATA
-        """
-        start_pos = 1
-        count = '100'
-        name = self.inquire_channel(pipeline)['barcode']
-        if not save_path:
-            data_folder = 'C:'+os.sep+"DATA"+os.sep
-            date = datetime.today().strftime('%Y-%m-%d')
-            if not os.path.exists(data_folder+date):
-                os.makedirs(data_folder+date)
-            uniqeid = str(shortuuid.uuid())
-            new_file = data_folder+date+os.sep+date+"_"+name+"_"+uniqeid+".txt"
-        else:
-            new_file = save_path
 
+        """
+        chunk_size = 1000
+        data = []
         devid, subdevid, chlid = self.channel_map[pipeline]
-        while count == '100':
+        while len(data)%chunk_size == 0:
             cmd_string = (
-                '<?xml version="1.0" encoding="UTF-8" ?><bts version="1.0">'
                 '<cmd>download</cmd>'
-                f'<download devtype="24" devid="{devid}" '
-                f'subdevid="{subdevid}" '
-                f'chlid="{chlid}" '
-                f'auxid="0" testid="0" startpos="{start_pos}" count="100"/>'
-                '</bts>'
+                f'<download devtype="27" devid="{devid}" subdevid="{subdevid}" chlid="{chlid}" '
+                f'auxid="0" testid="0" startpos="{len(data)+1}" count="{chunk_size}"/>'
             )
-            return_data = self.command(cmd_string)
-            match = re.search(r'<list count="(\d+)">(.*?)</list>', return_data, re.DOTALL)
-            if match:
-                # Extract the count and the matched text
-                count = match.group(1)
-                start_pos += int(count)
-                extracted_data = match.group(2)
-                if save_path:
-                    pass
-                with open(new_file, 'a', encoding='utf-8') as f:
-                    f.write(extracted_data)
-            else:
-                print('error')
-                break
-        self.xml_to_csv(new_file)
-        # deletes the txt file
-        if os.path.isfile(new_file):
-            os.remove(new_file)
+            xml_string = self.command(cmd_string)
+            data+=_extract_from_xml(xml_string)
+        # Orient as dict of lists
+        return _lod_to_dol(data)
 
     def xml_to_csv(self, filepath: str) -> None:
-        """ Converts the xml file to csv file """
+        """Convert the xml file to csv file."""
         pattern = r'<(.*?)\/>'
         key_vals_pattern = r'(\w+)="([^"]*)"'
         buffer = ''
@@ -242,10 +281,20 @@ class NewareAPI:
         df = pd.DataFrame(data)
         df.to_csv(save_file+'.csv', index=False)
 
-    def device_info(self) -> dict:
-        """ Get device information """
-        device_info = (
-            '<?xml version="1.0" encoding="UTF-8" ?>'
-            '<bts version="1.0"><cmd>getdevinfo</cmd></bts>'
-        )
-        return xmltodict.parse(self.command(device_info))
+    def device_info(self) -> list[dict]:
+        """Get device information.
+
+        Returns:
+            list[dict]: IP, device type, device id, sub-device id and channel id of all channels
+
+        """
+        command = '<cmd>getdevinfo</cmd>'
+        xml_string = self.command(command)
+        return _extract_from_xml(xml_string, 'middle')
+    
+    def update_channel_map(self) -> None:
+        devices = self.device_info()
+        self.channel_map = {
+            f"{d["devid"]}-{d["subdevid"]}-{d["Channelid"]}": [d["devid"], d["subdevid"], d["Channelid"]]
+            for d in devices
+        }

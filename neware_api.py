@@ -63,12 +63,11 @@ class NewareAPI:
     System with xml strings, and convenience methods to start, stop, and get the
     status and data from the channels.
     """
-    def __init__(self, ip: str, port: int, channel_map: dict):
+    def __init__(self, ip: str = "127.0.0.1", port: int = 502):
         """Initialize the NewareAPI object with the IP, port, and channel map."""
-        # TODO store device type in channel map instead of hardcoding
         self.ip = ip
         self.port = port
-        self.channel_map = channel_map
+        self.channel_map = self.update_channel_map()
         self.neware_socket = None
         self.start_message = '<?xml version="1.0" encoding="UTF-8" ?><bts version="1.0">'
         self.end_message = "</bts>"
@@ -110,7 +109,7 @@ class NewareAPI:
             received += self.neware_socket.recv(2048).decode()
         return received[:-len(self.termination)]
 
-    def start_job(self, pipeline: str, sampleid: str, payload_xml_path: str) -> str:
+    def start_job(self, pipeline: str, sampleid: str, payload_xml_path: str, save_location: str = "C:\\Neware data\\") -> str:
         """Start designated payload file on a pipeline.
 
         Args:
@@ -122,19 +121,19 @@ class NewareAPI:
             str: XML string response
 
         """
-        devid, subdevid, chlid = self.channel_map[pipeline]
+        pip = self.channel_map[pipeline]
         cmd = (
             '<cmd>start</cmd>'
             '<list count="1" DBC_CAN="1">'
-            f'<start ip="127.0.0.1" devtype="27" devid="{devid}"'
-            f'subdevid="{subdevid}" '
-            f'chlid="{chlid}" '
+            f'<start ip="{pip["ip"]}" devtype="{pip["devtype"]}" devid="{pip["devid"]}"'
+            f'subdevid="{pip["subdevid"]}" '
+            f'chlid="{pip["Channelid"]}" '
             f'barcode="{sampleid}">'
             f'{payload_xml_path}</start>'
-            '<backup backupdir="C:\\BACKUP" remotedir="" filenametype="1" '
+            f'<backup backupdir="{save_location}" remotedir="" filenametype="0" '
             'customfilename="" addtimewhenrepeat="0" createdirbydate="0" '
-            'filetype="1" backupontime="0" backupontimeinterval="720" '
-            'backupfree="0" />'
+            'filetype="0" backupontime="0" backupontimeinterval="720" '
+            'backupfree="1" />'
             '</list>'
         )
         return self.command(cmd)
@@ -142,22 +141,17 @@ class NewareAPI:
     def stop_job(self, pipelines: str|list[str]|tuple[str]) -> str:
         """Stop job running on pipeline(s)."""
         if isinstance(pipelines, str):
-            n_channels = 1
-            pipeline = [pipelines]
-        elif isinstance(pipelines, tuple) or isinstance(pipelines, list):
-            n_channels = len(pipelines)
-        else:
-            print("Cannot read Channel ID, make sure the type is correct.")
+            pipelines = [pipelines]
 
-        header = f'<cmd>stop</cmd><list count = "{n_channels}">'
-        footer = '</list>'
+        header = f'<cmd>stop</cmd><list count = "{len(pipelines)}">'
         cmd_string = ""
         for pipeline in pipelines:
-            devid, subdevid, chlid = self.channel_map[pipeline]
+            pip = self.channel_map[pipeline]
             cmd_string += (
-                f'\t\t<stop ip="127.0.0.1" devtype="27" devid="{devid}" '
-                f'subdevid="{subdevid}" chlid="{chlid}">true</stop>\n'
+                f'\t\t<stop ip="{pip["ip"]}" devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
+                f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}">true</stop>\n'
             )
+        footer = '</list>'
         return self.command(header+cmd_string+footer)
 
     def get_status(self, pipelines: str | list[str] = None) -> str:
@@ -181,10 +175,10 @@ class NewareAPI:
         header = f'<cmd>getchlstatus</cmd><list count = "{len(self.channel_map)}">'
         middle = ""
         for pipeline in pipelines:
-            devid, subdevid, chlid = self.channel_map[pipeline]
-            middle+= (
-                f'<status ip="{self.ip}" devtype="27" '
-                f'devid="{devid}" subdevid="{subdevid}" chlid="{chlid}">true</status>'
+            pip = self.channel_map[pipeline]
+            middle += (
+                f'<status ip="{pip["ip"]}" devtype="{pip["devtype"]}" '
+                f'devid="{pip["devid"]}" subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}">true</status>'
             )
         footer = '</list>'
         xml_string = self.command(header+middle+footer)
@@ -218,10 +212,10 @@ class NewareAPI:
         )
         middle = ""
         for pipeline in pipelines:
-            devid, subdevid, chlid = self.channel_map[pipeline]
+            pip = self.channel_map[pipeline]
             middle += (
-                '<inquire ip="127.0.0.1" devtype="27" '
-                f'devid="{devid}" subdevid="{subdevid}" chlid="{chlid}"\n'
+                f'<inquire ip="{pip["ip"]}" devtype="{pip["devtype"]}" '
+                f'devid="{pip["devid"]}" subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}"\n'
                 'aux="0" barcode="1">true</inquire>'
             )
         footer = '</list>'
@@ -237,11 +231,14 @@ class NewareAPI:
         """
         chunk_size = 1000
         data = []
-        devid, subdevid, chlid = self.channel_map[pipeline]
+        pip = self.channel_map[pipeline]
+        devid = pip["devid"]
+        subdevid = pip["subdevid"]
+        chlid = pip["Channelid"]
         while len(data)%chunk_size == 0:
             cmd_string = (
                 '<cmd>download</cmd>'
-                f'<download devtype="27" devid="{devid}" subdevid="{subdevid}" chlid="{chlid}" '
+                f'<download devtype="{pip["devtype"]}" devid="{pip["devid"]}" subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}" '
                 f'auxid="0" testid="0" startpos="{len(data)+1}" count="{chunk_size}"/>'
             )
             xml_string = self.command(cmd_string)
@@ -295,6 +292,6 @@ class NewareAPI:
     def update_channel_map(self) -> None:
         devices = self.device_info()
         self.channel_map = {
-            f"{d["devid"]}-{d["subdevid"]}-{d["Channelid"]}": [d["devid"], d["subdevid"], d["Channelid"]]
+            f"{d["devid"]}-{d["subdevid"]}-{d["Channelid"]}": d
             for d in devices
         }

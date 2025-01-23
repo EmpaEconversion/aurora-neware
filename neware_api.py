@@ -67,21 +67,21 @@ class NewareAPI:
         """Initialize the NewareAPI object with the IP, port, and channel map."""
         self.ip = ip
         self.port = port
-        self.channel_map = self.update_channel_map()
-        self.neware_socket = None
+        self.neware_socket = socket.socket()
+        self.channel_map = None
         self.start_message = '<?xml version="1.0" encoding="UTF-8" ?><bts version="1.0">'
         self.end_message = "</bts>"
         self.termination = "\n\n#\r\n"
 
     def connect(self) -> None:
         """ Establish the TCP connection """
-        self.neware_socket = socket.socket()
         self.neware_socket.connect((self.ip, self.port))
         connect = (
             '<cmd>connect</cmd>'
             '<username>admin</username><password>neware</password><type>bfgs</type>'
         )
         self.command(connect)
+        self.channel_map = self.update_channel_map()
 
     def disconnect(self) -> None:
         """ Close the port """

@@ -125,7 +125,7 @@ class NewareAPI:
         cmd = (
             '<cmd>start</cmd>'
             '<list count="1" DBC_CAN="1">'
-            f'<start ip="{pip["ip"]}" devtype="{pip["devtype"]}" devid="{pip["devid"]}"'
+            f'<start ip="{pip["ip"]}" devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
             f'subdevid="{pip["subdevid"]}" '
             f'chlid="{pip["Channelid"]}" '
             f'barcode="{sampleid}">'

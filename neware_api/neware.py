@@ -5,13 +5,15 @@ Neware Battery Testing System.
 """
 
 import socket
-import xml.etree.ElementTree as ET
+from types import TracebackType
 from typing import Literal
 
+from defusedxml import ElementTree
 
-def _auto_convert_type(value: str) -> int|float|str:
+
+def _auto_convert_type(value: str) -> int | float | str:
     """Try to automatically convert a string to float or int."""
-    if value=="--":
+    if value == "--":
         return None
     try:
         if "." in value:
@@ -20,22 +22,23 @@ def _auto_convert_type(value: str) -> int|float|str:
     except ValueError:
         return value
 
+
 def _extract_from_xml(
-        xml_string: str,
-        list_name: str = "list",
-        orient: Literal["records", "list"] = "records",
-    ) -> list[dict] | dict[list]:
+    xml_string: str,
+    list_name: str = "list",
+    orient: Literal["records", "list"] = "records",
+) -> list[dict] | dict[list]:
     """Extract elements inside <list> tags, convert to a list of dictionaries.
 
     Args:
         xml_string (str): raw xml string
         list_name (str): the tag that contains the list of elements to parse
-        orient ('records' or 'list', default 'records'): whether to return a list of 
+        orient ('records' or 'list', default 'records'): whether to return a list of
             dictionaries (records) or convert to a dictionary of lists (list)
 
     """
     # Parse response XML string
-    root = ET.fromstring(xml_string)
+    root = ElementTree.fromstring(xml_string)
     # Find <list> element
     list_element = root.find(list_name)
     # Extract <name> elements to a list of dictionaries
@@ -45,24 +48,26 @@ def _extract_from_xml(
         if el.text:
             el_dict[el.tag] = el.text
         result.append(el_dict)
-    result = [{k : _auto_convert_type(v) for k,v in el.items()} for el in result]
+    result = [{k: _auto_convert_type(v) for k, v in el.items()} for el in result]
     if orient == "list":
         result = _lod_to_dol(result)
     return result
+
 
 def _lod_to_dol(ld: list[dict]) -> dict[list]:
     """Convert list of dictionaries to dictionary of lists."""
     return {k: [d[k] for d in ld] for k in ld[0]}
 
+
 class NewareAPI:
     """Python API for Neware Battery Testing System.
-    
+
     Provides a method to send and receive commands to the Neware Battery Testing
     System with xml strings, and convenience methods to start, stop, and get the
     status and data from the channels.
     """
 
-    def __init__(self, ip: str = "127.0.0.1", port: int = 502):
+    def __init__(self, ip: str = "127.0.0.1", port: int = 502) -> None:
         """Initialize the NewareAPI object with the IP, port, and channel map."""
         self.ip = ip
         self.port = port
@@ -73,48 +78,59 @@ class NewareAPI:
         self.termination = "\n\n#\r\n"
 
     def connect(self) -> None:
-        """Establish the TCP connection"""
+        """Establish the TCP connection."""
         self.neware_socket.connect((self.ip, self.port))
-        connect = (
-            "<cmd>connect</cmd>"
-            "<username>admin</username><password>neware</password><type>bfgs</type>"
-        )
+        connect = "<cmd>connect</cmd><username>admin</username><password>neware</password><type>bfgs</type>"
         self.command(connect)
         self.channel_map = self.update_channel_map()
 
     def disconnect(self) -> None:
-        """Close the port"""
+        """Close the port."""
         if self.neware_socket:
             self.neware_socket.close()
 
-    def __enter__(self):
+    def __enter__(self) -> "NewareAPI":
         """Establish the TCP connection when entering the context."""
         self.connect()
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        """Close the port when exiting the context."""
         self.disconnect()
 
-    def __del__(self):
+    def __del__(self) -> None:
+        """Close the port when the object is deleted."""
         self.disconnect()
 
     def command(self, cmd: str) -> str:
         """Send a command to the device, and return the response."""
         self.neware_socket.sendall(
-            str.encode(self.start_message+cmd+self.end_message+self.termination, "utf-8"),
+            str.encode(self.start_message + cmd + self.end_message + self.termination, "utf-8"),
         )
         received = ""
         while not received.endswith(self.termination):
             received += self.neware_socket.recv(2048).decode()
-        return received[:-len(self.termination)]
+        return received[: -len(self.termination)]
 
-    def start_job(self, pipeline: str, sampleid: str, payload_xml_path: str, save_location: str = "C:\\Neware data\\") -> str:
+    def start_job(
+        self,
+        pipeline: str,
+        sampleid: str,
+        payload_xml_path: str,
+        save_location: str = "C:\\Neware data\\",
+    ) -> str:
         """Start designated payload file on a pipeline.
 
         Args:
-            pipeline (str): pipeline to start the job on
-            sampleid (str): barcode used in Newares BTS software
-            payload_xml_path (str): path to payload file
+            pipeline: pipeline to start the job on
+            sampleid: barcode used in Newares BTS software
+            payload_xml_path: path to payload file
+            save_location: location to save the data
 
         Returns:
             str: XML string response
@@ -122,22 +138,22 @@ class NewareAPI:
         """
         pip = self.channel_map[pipeline]
         cmd = (
-            '<cmd>start</cmd>'
+            "<cmd>start</cmd>"
             '<list count="1" DBC_CAN="1">'
             f'<start ip="{pip["ip"]}" devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
             f'subdevid="{pip["subdevid"]}" '
             f'chlid="{pip["Channelid"]}" '
             f'barcode="{sampleid}">'
-            f'{payload_xml_path}</start>'
+            f"{payload_xml_path}</start>"
             f'<backup backupdir="{save_location}" remotedir="" filenametype="0" '
             'customfilename="" addtimewhenrepeat="0" createdirbydate="0" '
             'filetype="0" backupontime="0" backupontimeinterval="720" '
             'backupfree="1" />'
-            '</list>'
+            "</list>"
         )
         return self.command(cmd)
 
-    def stop_job(self, pipelines: str|list[str]|tuple[str]) -> str:
+    def stop_job(self, pipelines: str | list[str] | tuple[str]) -> str:
         """Stop job running on pipeline(s)."""
         if isinstance(pipelines, str):
             pipelines = [pipelines]
@@ -151,9 +167,9 @@ class NewareAPI:
                 f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}">true</stop>\n'
             )
         footer = "</list>"
-        return self.command(header+cmd_string+footer)
+        return self.command(header + cmd_string + footer)
 
-    def get_status(self, pipelines: str | list[str] = None) -> str:
+    def get_status(self, pipelines: str | list[str] | None = None) -> str:
         """Get status of pipeline(s).
 
         Args:
@@ -167,7 +183,7 @@ class NewareAPI:
         # Make list of pipelines
         if not pipelines:  # If no argument passed use all pipelines
             pipelines = self.channel_map.keys()
-        if isinstance(pipelines,str):
+        if isinstance(pipelines, str):
             pipelines = [pipelines]
 
         # Create and submit command XML string
@@ -180,11 +196,11 @@ class NewareAPI:
                 f'devid="{pip["devid"]}" subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}">true</status>'
             )
         footer = "</list>"
-        xml_string = self.command(header+middle+footer)
+        xml_string = self.command(header + middle + footer)
 
         return _extract_from_xml(xml_string)
 
-    def inquire_channel(self, pipelines: str | list[str] = None) -> list[dict]:
+    def inquire_channel(self, pipelines: str | list[str] | None = None) -> list[dict]:
         """Inquire the status of the channel.
 
         Returns useful information like device id, cycle number, step, workstatus, current, voltage,
@@ -205,10 +221,7 @@ class NewareAPI:
             pipelines = [pipelines]
 
         # Create and submit command XML string
-        header = (
-            '<cmd>inquire</cmd>'
-            f'<list count = "{len(self.channel_map)}">'
-        )
+        header = f'<cmd>inquire</cmd><list count = "{len(self.channel_map)}">'
         middle = ""
         for pipeline in pipelines:
             pip = self.channel_map[pipeline]
@@ -218,7 +231,7 @@ class NewareAPI:
                 'aux="0" barcode="1">true</inquire>'
             )
         footer = "</list>"
-        xml_string = self.command(header+middle+footer)
+        xml_string = self.command(header + middle + footer)
 
         return _extract_from_xml(xml_string)
 
@@ -231,17 +244,15 @@ class NewareAPI:
         chunk_size = 1000
         data = []
         pip = self.channel_map[pipeline]
-        devid = pip["devid"]
-        subdevid = pip["subdevid"]
-        chlid = pip["Channelid"]
-        while len(data)%chunk_size == 0:
+        while len(data) % chunk_size == 0:
             cmd_string = (
-                '<cmd>download</cmd>'
-                f'<download devtype="{pip["devtype"]}" devid="{pip["devid"]}" subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}" '
-                f'auxid="0" testid="0" startpos="{len(data)+1}" count="{chunk_size}"/>'
+                "<cmd>download</cmd>"
+                f'<download devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
+                f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}" '
+                f'auxid="0" testid="0" startpos="{len(data) + 1}" count="{chunk_size}"/>'
             )
             xml_string = self.command(cmd_string)
-            data+=_extract_from_xml(xml_string)
+            data += _extract_from_xml(xml_string)
         # Orient as dict of lists
         return _lod_to_dol(data)
 
@@ -257,8 +268,6 @@ class NewareAPI:
         return _extract_from_xml(xml_string, "middle")
 
     def update_channel_map(self) -> None:
+        """Update the channel map with the latest device information."""
         devices = self.device_info()
-        self.channel_map = {
-            f"{d["devid"]}-{d["subdevid"]}-{d["Channelid"]}": d
-            for d in devices
-        }
+        self.channel_map = {f"{d['devid']}-{d['subdevid']}-{d['Channelid']}": d for d in devices}

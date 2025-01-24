@@ -23,6 +23,7 @@ dependencies = [
     "pytz==2024.2",
     "shortuuid==1.0.13",
     "six==1.16.0",
+    "typer~=0.15",
     "tzdata==2024.2",
     "xmltodict==0.13.0",
 ]
@@ -32,6 +33,9 @@ dev = [
     "pre-commit~=4.0",
     "pytest~=8.0",
 ]
+
+[project.scripts]
+neware = "neware_api.cli.main:app"
 
 [tool.ruff]
 line-length = 120  # Set the maximum line length

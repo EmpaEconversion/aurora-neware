@@ -4,28 +4,26 @@ Contains a single class NewareAPI that provides methods to interact with the
 Neware Battery Testing System.
 """
 
-import re
 import socket
-import pandas as pd
 import xml.etree.ElementTree as ET
 from typing import Literal
 
+
 def _auto_convert_type(value: str) -> int|float|str:
     """Try to automatically convert a string to float or int."""
-    if value=='--':
+    if value=="--":
         return None
     try:
-        if '.' in value:
+        if "." in value:
             return float(value)
-        else:
-            return int(value)
+        return int(value)
     except ValueError:
         return value
-    
+
 def _extract_from_xml(
         xml_string: str,
-        list_name: str = 'list',
-        orient: Literal['records', 'list'] = 'records'
+        list_name: str = "list",
+        orient: Literal["records", "list"] = "records",
     ) -> list[dict] | dict[list]:
     """Extract elements inside <list> tags, convert to a list of dictionaries.
 
@@ -48,7 +46,7 @@ def _extract_from_xml(
             el_dict[el.tag] = el.text
         result.append(el_dict)
     result = [{k : _auto_convert_type(v) for k,v in el.items()} for el in result]
-    if orient == 'list':
+    if orient == "list":
         result = _lod_to_dol(result)
     return result
 
@@ -63,6 +61,7 @@ class NewareAPI:
     System with xml strings, and convenience methods to start, stop, and get the
     status and data from the channels.
     """
+
     def __init__(self, ip: str = "127.0.0.1", port: int = 502):
         """Initialize the NewareAPI object with the IP, port, and channel map."""
         self.ip = ip
@@ -74,17 +73,17 @@ class NewareAPI:
         self.termination = "\n\n#\r\n"
 
     def connect(self) -> None:
-        """ Establish the TCP connection """
+        """Establish the TCP connection"""
         self.neware_socket.connect((self.ip, self.port))
         connect = (
-            '<cmd>connect</cmd>'
-            '<username>admin</username><password>neware</password><type>bfgs</type>'
+            "<cmd>connect</cmd>"
+            "<username>admin</username><password>neware</password><type>bfgs</type>"
         )
         self.command(connect)
         self.channel_map = self.update_channel_map()
 
     def disconnect(self) -> None:
-        """ Close the port """
+        """Close the port"""
         if self.neware_socket:
             self.neware_socket.close()
 
@@ -102,7 +101,7 @@ class NewareAPI:
     def command(self, cmd: str) -> str:
         """Send a command to the device, and return the response."""
         self.neware_socket.sendall(
-            str.encode(self.start_message+cmd+self.end_message+self.termination, 'utf-8')
+            str.encode(self.start_message+cmd+self.end_message+self.termination, "utf-8"),
         )
         received = ""
         while not received.endswith(self.termination):
@@ -151,7 +150,7 @@ class NewareAPI:
                 f'\t\t<stop ip="{pip["ip"]}" devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
                 f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}">true</stop>\n'
             )
-        footer = '</list>'
+        footer = "</list>"
         return self.command(header+cmd_string+footer)
 
     def get_status(self, pipelines: str | list[str] = None) -> str:
@@ -170,7 +169,7 @@ class NewareAPI:
             pipelines = self.channel_map.keys()
         if isinstance(pipelines,str):
             pipelines = [pipelines]
-        
+
         # Create and submit command XML string
         header = f'<cmd>getchlstatus</cmd><list count = "{len(self.channel_map)}">'
         middle = ""
@@ -180,9 +179,9 @@ class NewareAPI:
                 f'<status ip="{pip["ip"]}" devtype="{pip["devtype"]}" '
                 f'devid="{pip["devid"]}" subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}">true</status>'
             )
-        footer = '</list>'
+        footer = "</list>"
         xml_string = self.command(header+middle+footer)
-        
+
         return _extract_from_xml(xml_string)
 
     def inquire_channel(self, pipelines: str | list[str] = None) -> list[dict]:
@@ -204,7 +203,7 @@ class NewareAPI:
             pipelines = self.channel_map.keys()
         if isinstance(pipelines, str):
             pipelines = [pipelines]
-        
+
         # Create and submit command XML string
         header = (
             '<cmd>inquire</cmd>'
@@ -218,7 +217,7 @@ class NewareAPI:
                 f'devid="{pip["devid"]}" subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}"\n'
                 'aux="0" barcode="1">true</inquire>'
             )
-        footer = '</list>'
+        footer = "</list>"
         xml_string = self.command(header+middle+footer)
 
         return _extract_from_xml(xml_string)
@@ -246,38 +245,6 @@ class NewareAPI:
         # Orient as dict of lists
         return _lod_to_dol(data)
 
-    def xml_to_csv(self, filepath: str) -> None:
-        """Convert the xml file to csv file."""
-        pattern = r'<(.*?)\/>'
-        key_vals_pattern = r'(\w+)="([^"]*)"'
-        buffer = ''
-        data = []
-        save_file = filepath.rsplit('.', 1)[0]
-        with open(filepath, 'r', encoding='utf-8') as file:
-            while True:
-                chunk = buffer + file.read(2048)
-                if not chunk:
-                    break
-
-                # Process the chunk up to the last complete piece of data
-                last_newline = chunk.rfind('\n')
-                if last_newline != -1:
-                    data_to_process = chunk[:last_newline]
-                    buffer = chunk[last_newline+1:]
-                else:
-                    data_to_process = chunk
-                    buffer = ''
-                # Regular expression pattern to match each row
-                matches = re.findall(pattern, data_to_process)
-                for match in matches:
-                    # Fine Key-Value pairs
-                    key_val_matches = re.findall(key_vals_pattern, match)
-                    # Convert the matches into a dictionary
-                    row = {key: value for key, value in key_val_matches}
-                    data.append(row)
-        df = pd.DataFrame(data)
-        df.to_csv(save_file+'.csv', index=False)
-
     def device_info(self) -> list[dict]:
         """Get device information.
 
@@ -285,10 +252,10 @@ class NewareAPI:
             list[dict]: IP, device type, device id, sub-device id and channel id of all channels
 
         """
-        command = '<cmd>getdevinfo</cmd>'
+        command = "<cmd>getdevinfo</cmd>"
         xml_string = self.command(command)
-        return _extract_from_xml(xml_string, 'middle')
-    
+        return _extract_from_xml(xml_string, "middle")
+
     def update_channel_map(self) -> None:
         devices = self.device_info()
         self.channel_map = {

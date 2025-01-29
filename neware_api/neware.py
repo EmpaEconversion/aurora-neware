@@ -185,36 +185,49 @@ class NewareAPI:
         footer = "</list>"
         return self.command(header + cmd_string + footer)
 
-    def get_status(self, pipelines: str | list[str] | None = None) -> list[dict]:
+    def get_status(self, pipeline_ids: str | list[str] | None = None) -> dict[str,dict]:
         """Get status of pipeline(s).
 
         Args:
-            pipelines (str|list[str], optional): list of pipeline IDs
+            pipeline_ids (str|list[str], optional): pipeline ID or list of pipeline IDs
                 if not given, all pipelines from channel map are used
 
         Returns:
             list[dict]: a dictionary per channel with status
 
+        Raises:
+            KeyError: if pipeline ID not in the channel map
+
         """
-        # Make list of pipelines
-        if not pipelines:  # If no argument passed use all pipelines
-            pipelines = list(self.channel_map)  # list of keys
-        if isinstance(pipelines, str):
-            pipelines = [pipelines]
+        # Get the (subset) of the channel map
+        if not pipeline_ids:  # If no argument passed use all pipelines
+            pipelines = self.channel_map
+        if isinstance(pipeline_ids, str):
+            pipelines = {pipeline_ids: self.channel_map[pipeline_ids]}
+        if isinstance(pipeline_ids,list):
+            pipelines = {p: self.channel_map[p] for p in pipeline_ids}
 
         # Create and submit command XML string
-        header = f'<cmd>getchlstatus</cmd><list count = "{len(self.channel_map)}">'
+        header = f'<cmd>getchlstatus</cmd><list count = "{len(pipelines)}">'
         middle = ""
-        for pipeline in pipelines:
-            pip = self.channel_map[pipeline]
+        for pip in pipelines.values():
             middle += (
                 f'<status ip="{pip["ip"]}" devtype="{pip["devtype"]}" '
                 f'devid="{pip["devid"]}" subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}">true</status>'
             )
         footer = "</list>"
         xml_string = self.command(header + middle + footer)
+        records = _xml_to_records(xml_string)
 
-        return _xml_to_records(xml_string)
+        # It seems like in the Neware response the subdevid is ALWAYS 1, this looks like a bug on their end
+        # E.g. if you request the status of 13-5-5 it correctly gets the status of 13-5-5, but tells you it is returning
+        # the status of 13-1-5.
+        # Workaround: instead of returning the result directly, we merge it with the input pipelines, prioritising the
+        # (correct) channel information from the channel map.
+        return {
+            pipeline_id: {**record, **pipeline_dict}
+            for (pipeline_id, pipeline_dict), record in zip(pipelines.items(), records, strict=True)
+        }
 
     def inquire_channel(self, pipelines: str | list[str] | None = None) -> list[dict]:
         """Inquire the status of the channel.

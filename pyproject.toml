@@ -39,8 +39,8 @@ neware = "neware_api.cli.main:app"
 
 [tool.ruff]
 line-length = 120  # Set the maximum line length
-select = ["ALL"]
-ignore = [
+lint.select = ["ALL"]
+lint.ignore = [
     "N806",
     "T201",
     "FA102",
@@ -50,6 +50,9 @@ ignore = [
     "PLR2004",
     "TD002",
     "TD003",
+    "D203",
+    "D213",
+    "COM812",
 ]
 fix = true
 

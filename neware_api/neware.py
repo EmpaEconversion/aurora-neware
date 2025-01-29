@@ -50,10 +50,11 @@ def _xml_to_records(
         result.append(el_dict)
     return [{k: _auto_convert_type(v) for k, v in el.items()} for el in result]
 
+
 def _xml_to_lists(
     xml_string: str,
     list_name: str = "list",
-) -> dict[str,list]:
+) -> dict[str, list]:
     """Extract elements inside <list> tags, convert to a dictionary of lists.
 
     Args:
@@ -65,10 +66,11 @@ def _xml_to_lists(
             like 'orient = list' in JSON
 
     """
-    result = _xml_to_records(xml_string,list_name)
+    result = _xml_to_records(xml_string, list_name)
     return _lod_to_dol(result)
 
-def _lod_to_dol(ld: list[dict]) -> dict[str,list]:
+
+def _lod_to_dol(ld: list[dict]) -> dict[str, list]:
     """Convert list of dictionaries to dictionary of lists."""
     return {k: [d[k] for d in ld] for k in ld[0]}
 
@@ -86,7 +88,7 @@ class NewareAPI:
         self.ip = ip
         self.port = port
         self.neware_socket = socket.socket()
-        self.channel_map: dict[str,dict] = {}
+        self.channel_map: dict[str, dict] = {}
         self.start_message = '<?xml version="1.0" encoding="UTF-8" ?><bts version="1.0">'
         self.end_message = "</bts>"
         self.termination = "\n\n#\r\n"
@@ -249,7 +251,7 @@ class NewareAPI:
 
         return _xml_to_records(xml_string)
 
-    def download_data(self, pipeline: str) -> dict[str,list]:
+    def download_data(self, pipeline: str) -> dict[str, list]:
         """Download the data points for chlid.
 
         Uses the channel map to get the device id, subdevice id, and channel id.

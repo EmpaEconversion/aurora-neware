@@ -52,3 +52,6 @@ ignore = [
     "TD003",
 ]
 fix = true
+
+[tool.mypy]
+disable_error_code = ["import-untyped"]

@@ -6,12 +6,11 @@ Neware Battery Testing System.
 
 import socket
 from types import TracebackType
-from typing import Literal
 
 from defusedxml import ElementTree
 
 
-def _auto_convert_type(value: str) -> int | float | str:
+def _auto_convert_type(value: str) -> int | float | str | None:
     """Try to automatically convert a string to float or int."""
     if value == "--":
         return None
@@ -23,18 +22,19 @@ def _auto_convert_type(value: str) -> int | float | str:
         return value
 
 
-def _extract_from_xml(
+def _xml_to_records(
     xml_string: str,
     list_name: str = "list",
-    orient: Literal["records", "list"] = "records",
-) -> list[dict] | dict[list]:
+) -> list[dict]:
     """Extract elements inside <list> tags, convert to a list of dictionaries.
 
     Args:
         xml_string (str): raw xml string
         list_name (str): the tag that contains the list of elements to parse
-        orient ('records' or 'list', default 'records'): whether to return a list of
-            dictionaries (records) or convert to a dictionary of lists (list)
+
+    Returns:
+        list[dict]: a list of dictionaries
+            like 'orient = records' in JSON
 
     """
     # Parse response XML string
@@ -48,13 +48,27 @@ def _extract_from_xml(
         if el.text:
             el_dict[el.tag] = el.text
         result.append(el_dict)
-    result = [{k: _auto_convert_type(v) for k, v in el.items()} for el in result]
-    if orient == "list":
-        result = _lod_to_dol(result)
-    return result
+    return [{k: _auto_convert_type(v) for k, v in el.items()} for el in result]
 
+def _xml_to_lists(
+    xml_string: str,
+    list_name: str = "list",
+) -> dict[str,list]:
+    """Extract elements inside <list> tags, convert to a dictionary of lists.
 
-def _lod_to_dol(ld: list[dict]) -> dict[list]:
+    Args:
+        xml_string (str): raw xml string
+        list_name (str): the tag that contains the list of elements to parse
+
+    Returns:
+        dict[str,list]: keys are the names of records, each has a list of values
+            like 'orient = list' in JSON
+
+    """
+    result = _xml_to_records(xml_string,list_name)
+    return _lod_to_dol(result)
+
+def _lod_to_dol(ld: list[dict]) -> dict[str,list]:
     """Convert list of dictionaries to dictionary of lists."""
     return {k: [d[k] for d in ld] for k in ld[0]}
 
@@ -72,7 +86,7 @@ class NewareAPI:
         self.ip = ip
         self.port = port
         self.neware_socket = socket.socket()
-        self.channel_map = None
+        self.channel_map: dict[str,dict] = {}
         self.start_message = '<?xml version="1.0" encoding="UTF-8" ?><bts version="1.0">'
         self.end_message = "</bts>"
         self.termination = "\n\n#\r\n"
@@ -82,7 +96,7 @@ class NewareAPI:
         self.neware_socket.connect((self.ip, self.port))
         connect = "<cmd>connect</cmd><username>admin</username><password>neware</password><type>bfgs</type>"
         self.command(connect)
-        self.channel_map = self.update_channel_map()
+        self.update_channel_map()
 
     def disconnect(self) -> None:
         """Close the port."""
@@ -169,7 +183,7 @@ class NewareAPI:
         footer = "</list>"
         return self.command(header + cmd_string + footer)
 
-    def get_status(self, pipelines: str | list[str] | None = None) -> str:
+    def get_status(self, pipelines: str | list[str] | None = None) -> list[dict]:
         """Get status of pipeline(s).
 
         Args:
@@ -182,7 +196,7 @@ class NewareAPI:
         """
         # Make list of pipelines
         if not pipelines:  # If no argument passed use all pipelines
-            pipelines = self.channel_map.keys()
+            pipelines = list(self.channel_map)  # list of keys
         if isinstance(pipelines, str):
             pipelines = [pipelines]
 
@@ -198,7 +212,7 @@ class NewareAPI:
         footer = "</list>"
         xml_string = self.command(header + middle + footer)
 
-        return _extract_from_xml(xml_string)
+        return _xml_to_records(xml_string)
 
     def inquire_channel(self, pipelines: str | list[str] | None = None) -> list[dict]:
         """Inquire the status of the channel.
@@ -216,7 +230,7 @@ class NewareAPI:
         """
         # Make list of pipelines
         if not pipelines:
-            pipelines = self.channel_map.keys()
+            pipelines = list(self.channel_map)
         if isinstance(pipelines, str):
             pipelines = [pipelines]
 
@@ -233,16 +247,16 @@ class NewareAPI:
         footer = "</list>"
         xml_string = self.command(header + middle + footer)
 
-        return _extract_from_xml(xml_string)
+        return _xml_to_records(xml_string)
 
-    def download_data(self, pipeline: str) -> None:
+    def download_data(self, pipeline: str) -> dict[str,list]:
         """Download the data points for chlid.
 
         Uses the channel map to get the device id, subdevice id, and channel id.
 
         """
         chunk_size = 1000
-        data = []
+        data: list[dict] = []
         pip = self.channel_map[pipeline]
         while len(data) % chunk_size == 0:
             cmd_string = (
@@ -252,7 +266,7 @@ class NewareAPI:
                 f'auxid="0" testid="0" startpos="{len(data) + 1}" count="{chunk_size}"/>'
             )
             xml_string = self.command(cmd_string)
-            data += _extract_from_xml(xml_string)
+            data += _xml_to_records(xml_string)
         # Orient as dict of lists
         return _lod_to_dol(data)
 
@@ -265,7 +279,7 @@ class NewareAPI:
         """
         command = "<cmd>getdevinfo</cmd>"
         xml_string = self.command(command)
-        return _extract_from_xml(xml_string, "middle")
+        return _xml_to_records(xml_string, "middle")
 
     def update_channel_map(self) -> None:
         """Update the channel map with the latest device information."""

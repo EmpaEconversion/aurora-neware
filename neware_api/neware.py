@@ -264,7 +264,7 @@ class NewareAPI:
         footer = "</list>"
         xml_string = self.command(header + middle + footer)
 
-        records =  _xml_to_records(xml_string)
+        records = _xml_to_records(xml_string)
 
         return {
             pipeline_id: {**record, **pipeline_dict}

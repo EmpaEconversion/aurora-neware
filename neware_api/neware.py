@@ -185,7 +185,7 @@ class NewareAPI:
         footer = "</list>"
         return self.command(header + cmd_string + footer)
 
-    def get_status(self, pipeline_ids: str | list[str] | None = None) -> dict[str,dict]:
+    def get_status(self, pipeline_ids: str | list[str] | None = None) -> dict[str, dict]:
         """Get status of pipeline(s).
 
         Args:
@@ -204,7 +204,7 @@ class NewareAPI:
             pipelines = self.channel_map
         if isinstance(pipeline_ids, str):
             pipelines = {pipeline_ids: self.channel_map[pipeline_ids]}
-        if isinstance(pipeline_ids,list):
+        if isinstance(pipeline_ids, list):
             pipelines = {p: self.channel_map[p] for p in pipeline_ids}
 
         # Create and submit command XML string

@@ -36,7 +36,7 @@ def status(pipeline_ids: Annotated[Optional[list[str]], typer.Argument()] = None
 
     """
     with NewareAPI() as nw:
-        typer.echo(json.dumps(nw.get_status(pipeline_ids)))
+        typer.echo(json.dumps(nw.inquire_channel(pipeline_ids)))
 
 
 if __name__ == "__main__":

@@ -204,7 +204,7 @@ class NewareAPI:
             pipelines = self.channel_map
         if isinstance(pipeline_ids, str):
             pipelines = {pipeline_ids: self.channel_map[pipeline_ids]}
-        if isinstance(pipeline_ids, list):
+        elif isinstance(pipeline_ids, list):
             pipelines = {p: self.channel_map[p] for p in pipeline_ids}
 
         # Create and submit command XML string
@@ -249,7 +249,7 @@ class NewareAPI:
             pipelines = self.channel_map
         if isinstance(pipeline_ids, str):
             pipelines = {pipeline_ids: self.channel_map[pipeline_ids]}
-        if isinstance(pipeline_ids, list):
+        elif isinstance(pipeline_ids, list):
             pipelines = {p: self.channel_map[p] for p in pipeline_ids}
 
         # Create and submit command XML string

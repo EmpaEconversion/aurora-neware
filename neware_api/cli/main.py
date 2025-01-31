@@ -29,7 +29,8 @@ def status(pipeline_ids: Annotated[Optional[list[str]], typer.Argument()] = None
     {"13-1-5":{...}, "14-3-5":{...}}
 
     Args:
-        pipeline_ids (optional, list[str]): list of pipeline IDs to get status from
+        pipeline_ids (optional): list of pipeline IDs to get status from
+            will use the full channel map if not provided
 
     Raises:
         KeyError if pipeline ID not in channel map

@@ -29,12 +29,11 @@ def _xml_to_records(
     """Extract elements inside <list> tags, convert to a list of dictionaries.
 
     Args:
-        xml_string (str): raw xml string
-        list_name (str): the tag that contains the list of elements to parse
+        xml_string: raw xml string
+        list_name: the tag that contains the list of elements to parse
 
     Returns:
-        list[dict]: a list of dictionaries
-            like 'orient = records' in JSON
+        list of dictionaries like 'orient = records' in JSON
 
     """
     # Parse response XML string
@@ -58,11 +57,11 @@ def _xml_to_lists(
     """Extract elements inside <list> tags, convert to a dictionary of lists.
 
     Args:
-        xml_string (str): raw xml string
-        list_name (str): the tag that contains the list of elements to parse
+        xml_string: raw xml string
+        list_name: the tag that contains the list of elements to parse
 
     Returns:
-        dict[str,list]: keys are the names of records, each has a list of values
+        dict where keys are the names of records, each has a list of values
             like 'orient = list' in JSON
 
     """
@@ -189,11 +188,11 @@ class NewareAPI:
         """Get status of pipeline(s).
 
         Args:
-            pipeline_ids (str|list[str], optional): pipeline ID or list of pipeline IDs
+            pipeline_ids (optional): pipeline ID or list of pipeline IDs
                 if not given, all pipelines from channel map are used
 
         Returns:
-            list[dict]: a dictionary per channel with status
+            a dictionary per channel with status
 
         Raises:
             KeyError: if pipeline ID not in the channel map
@@ -236,11 +235,11 @@ class NewareAPI:
         time, and whether the channel is currently open.
 
         Args:
-            pipeline_ids (optional, str|list[str]): pipeline IDs or list of pipeline Ids
+            pipeline_ids (optional): pipeline IDs or list of pipeline Ids
                 default: None, will get all pipeline IDs in the channel map
 
         Returns:
-            dict[str,dict]: a dictionary per channel with the latest info and data point
+            a dictionary per channel with the latest info and data point
                 key is the pipeline ID e.g. "13-1-5"
 
         """
@@ -296,7 +295,7 @@ class NewareAPI:
         """Get device information.
 
         Returns:
-            list[dict]: IP, device type, device id, sub-device id and channel id of all channels
+            IP, device type, device id, sub-device id and channel id of all channels
 
         """
         command = "<cmd>getdevinfo</cmd>"

@@ -16,7 +16,7 @@ def start(
     pipeline: str,
     sampleid: str,
     payload_xml_path: str,
-    save_location: Annotated[str, typer.Argument()] = "C://Neware data/"
+    save_location: Annotated[str, typer.Argument()] = "C://Neware data/",
 ) -> None:
     """Start the cycling process.
 
@@ -34,8 +34,7 @@ def start(
 
     """
     typer.echo(
-        f"Sample {sampleid} starting job {payload_xml_path} "
-        f"on channel {pipeline}, saving data to {save_location}."
+        f"Sample {sampleid} starting job {payload_xml_path} on channel {pipeline}, saving data to {save_location}."
     )
     with NewareAPI() as nw:
         response = nw.start_job(
@@ -44,14 +43,15 @@ def start(
             payload_xml_path=payload_xml_path,
             save_location=save_location,
         )
-    match = re.search("(?<=>)(.*)(?=</start>)",response)
+    match = re.search("(?<=>)(.*)(?=</start>)", response)
     result = match.group(1) if match else ""
-    if result=="ok":
+    if result == "ok":
         typer.echo("Successfully started job.")
     elif result == "false":
         typer.echo("Starting job failed. Downlaod and check BTS log for more detail.")
     else:
         typer.echo(f"Device response not understood:\n{response}")
+
 
 @app.command()
 def status(pipeline_ids: Annotated[Optional[list[str]], typer.Argument()] = None) -> None:  # noqa: UP007

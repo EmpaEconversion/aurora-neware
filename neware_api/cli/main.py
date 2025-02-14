@@ -48,9 +48,11 @@ def start(
     if result == "ok":
         typer.echo("Successfully started job.")
     elif result == "false":
-        typer.echo("Starting job failed. Downlaod and check BTS log for more detail.")
+        typer.echo("Starting job failed. Download and check BTS log for more detail.")
+        raise typer.Exit(code=1)
     else:
         typer.echo(f"Device response not understood:\n{response}")
+        raise typer.Exit(code=1)
 
 
 @app.command()

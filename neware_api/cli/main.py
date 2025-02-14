@@ -1,6 +1,7 @@
 """CLI for the Neware battery cycling API."""
 
 import json
+import re
 from typing import Annotated, Optional
 
 import typer
@@ -11,9 +12,47 @@ app = typer.Typer()
 
 
 @app.command()
-def start() -> None:
-    """Start the cycling process."""
-    typer.echo("Starting the cycling process for battery is NOT IMPLEMENTED YET.")
+def start(
+    pipeline: str,
+    sampleid: str,
+    payload_xml_path: str,
+    save_location: Annotated[str, typer.Argument()] = "C://Neware data/",
+) -> None:
+    """Start the cycling process.
+
+    Example usage:
+    >>> neware start '13-1-2' 'mysamplename' 'my/file/location/ocv.xml' 'my/data/location/'
+
+    Args:
+        pipeline: the identifier given by device-subdevice-channel e.g. 13-1-2
+        sampleid: name of the sample, used as the barcode in the measurement
+        payload_xml_path: path to the xml job file on the cycler server machine
+        save_location (default C:/Neware data): location to save the data on server
+
+    Raises:
+        KeyError if pipeline ID not in channel map
+
+    """
+    typer.echo(
+        f"Sample {sampleid} starting job {payload_xml_path} on channel {pipeline}, saving data to {save_location}."
+    )
+    with NewareAPI() as nw:
+        response = nw.start_job(
+            pipeline=pipeline,
+            sampleid=sampleid,
+            payload_xml_path=payload_xml_path,
+            save_location=save_location,
+        )
+    match = re.search("(?<=>)(.*)(?=</start>)", response)
+    result = match.group(1) if match else ""
+    if result == "ok":
+        typer.echo("Successfully started job.")
+    elif result == "false":
+        typer.echo("Starting job failed. Download and check BTS log for more detail.")
+        raise typer.Exit(code=1)
+    else:
+        typer.echo(f"Device response not understood:\n{response}")
+        raise typer.Exit(code=1)
 
 
 @app.command()

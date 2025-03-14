@@ -270,6 +270,64 @@ class NewareAPI:
             for (pipeline_id, pipeline_dict), record in zip(pipelines.items(), records, strict=True)
         }
 
+    def inquiredf(self, pipeline_ids: str | list[str] | None = None) -> dict[str, dict]:
+        """Use the inquiredf command on the channel.
+
+        Returns information about the current running test like the test ID and number of datapoints.
+
+        Args:
+            pipeline_ids (optional): pipeline IDs or list of pipeline Ids
+                default: None, will get all pipeline IDs in the channel map
+
+        Returns:
+            a dictionary per channel with the latest info and data point
+                key is the pipeline ID e.g. "13-1-5"
+
+        """
+        # Get the (subset) of the channel map
+        if not pipeline_ids:  # If no argument passed use all pipelines
+            pipelines = self.channel_map
+        if isinstance(pipeline_ids, str):
+            pipelines = {pipeline_ids: self.channel_map[pipeline_ids]}
+        elif isinstance(pipeline_ids, list):
+            pipelines = {p: self.channel_map[p] for p in pipeline_ids}
+
+        # Create and submit command XML string
+        header = f'<cmd>inquiredf</cmd><list count = "{len(pipelines)}">'
+        middle = ""
+        for pip in pipelines.values():
+            middle += (
+                f'<chl devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
+                f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}" testid="0" />'
+            )
+        footer = "</list>"
+        xml_string = self.command(header + middle + footer)
+        records = _xml_to_records(xml_string)
+
+        return {
+            pipeline_id: {**record, **pipeline_dict}
+            for (pipeline_id, pipeline_dict), record in zip(pipelines.items(), records, strict=True)
+        }
+
+    def downloadlog(self, pipeline_id: str) -> dict:
+        """Download the log information for the current running test. Only queries one channel at a time.
+
+        Args:
+            pipeline_id: ID of the pipeline {devid}-{subdevid}-{chlid}
+
+        Returns:
+            List of dictionaries containing log information.
+
+        """
+        pip = self.channel_map[pipeline_id]
+        command = (
+            '<cmd>downloadlog</cmd>'
+            f'<download devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
+            f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}" testid="0"/>'
+        )
+        result = self.command(command)
+        return _xml_to_records(result)
+
     def download_data(self, pipeline: str) -> dict[str, list]:
         """Download the data points for chlid.
 

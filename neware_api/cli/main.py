@@ -39,6 +39,17 @@ def status(pipeline_ids: Annotated[Optional[list[str]], typer.Argument()] = None
     with NewareAPI() as nw:
         typer.echo(json.dumps(nw.inquire_channel(pipeline_ids)))
 
+@app.command()
+def inquiredf(pipeline_ids: Annotated[Optional[list[str]], typer.Argument()] = None) -> None:  # noqa: UP007
+    """Get test information from channels."""
+    with NewareAPI() as nw:
+        typer.echo(json.dumps(nw.inquiredf(pipeline_ids)))
+
+@app.command()
+def downloadlog(pipeline_id: str) -> None:
+    """Download log data from specified channel."""
+    with NewareAPI() as nw:
+        typer.echo(json.dumps(nw.downloadlog(pipeline_id)))
 
 if __name__ == "__main__":
     app()

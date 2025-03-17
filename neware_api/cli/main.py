@@ -10,7 +10,9 @@ from neware_api import NewareAPI
 app = typer.Typer()
 
 @app.command()
-def status(pipeline_ids: Annotated[Optional[list[str]], typer.Argument()] = None) -> None:  # noqa: UP007
+def status(
+    pipeline_ids: Annotated[Optional[list[str]], typer.Argument()] = None  # noqa: UP007
+) -> None:
     """Get the status of the cycling process for all or selected pipelines.
 
     Example usage:
@@ -33,7 +35,9 @@ def status(pipeline_ids: Annotated[Optional[list[str]], typer.Argument()] = None
         typer.echo(json.dumps(nw.inquire_channel(pipeline_ids)))
 
 @app.command()
-def inquiredf(pipeline_ids: Annotated[Optional[list[str]], typer.Argument()] = None) -> None:  # noqa: UP007
+def inquiredf(
+    pipeline_ids: Annotated[Optional[list[str]], typer.Argument()] = None  # noqa: UP007
+) -> None:
     """Get test information from channels."""
     with NewareAPI() as nw:
         typer.echo(json.dumps(nw.inquiredf(pipeline_ids)))
@@ -45,7 +49,12 @@ def downloadlog(pipeline_id: str) -> None:
         typer.echo(json.dumps(nw.downloadlog(pipeline_id)))
 
 @app.command()
-def start(pipeline_id: str, sample_id: str, xml_file: str, save_location: str | None = "C:\\Neware data\\"):
+def start(
+    pipeline_id: str,
+    sample_id: str,
+    xml_file: str,
+    save_location: str | None = "C:\\Neware data\\"
+) -> None:
     """Start job on selected channel.
 
     Example usage:
@@ -73,7 +82,7 @@ def start(pipeline_id: str, sample_id: str, xml_file: str, save_location: str | 
         typer.echo(json.dumps(result))
 
 @app.command()
-def stop(pipeline_id: str):
+def stop(pipeline_id: str) -> None:
     """Stop job on selected channel.
 
     Example usage:

@@ -96,7 +96,12 @@ class NewareAPI:
     def connect(self) -> None:
         """Establish the TCP connection."""
         self.neware_socket.connect((self.ip, self.port))
-        connect = "<cmd>connect</cmd><username>admin</username><password>neware</password><type>bfgs</type>"
+        connect = (
+            "<cmd>connect</cmd>"
+            "<username>admin</username>"
+            "<password>neware</password>"
+            "<type>bfgs</type>"
+        )
         self.command(connect)
         self.update_channel_map()
 
@@ -234,17 +239,19 @@ class NewareAPI:
         for pip in pipelines.values():
             middle += (
                 f'<status ip="{pip["ip"]}" devtype="{pip["devtype"]}" '
-                f'devid="{pip["devid"]}" subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}">true</status>'
+                f'devid="{pip["devid"]}" subdevid="{pip["subdevid"]}" '
+                'chlid="{pip["Channelid"]}">true</status>'
             )
         footer = "</list>"
         xml_string = self.command(header + middle + footer)
         records = _xml_to_records(xml_string)
 
-        # It seems like in the Neware response the subdevid is ALWAYS 1, this looks like a bug on their end
-        # E.g. if you request the status of 13-5-5 it correctly gets the status of 13-5-5, but tells you it is returning
-        # the status of 13-1-5.
-        # Workaround: instead of returning the result directly, we merge it with the input pipelines, prioritising the
-        # (correct) channel information from the channel map.
+        # It seems like in the Neware response the subdevid is ALWAYS 1, this looks like a bug on
+        # their end.
+        # E.g. if you request the status of 13-5-5 it correctly gets the status of 13-5-5, but tells
+        # you it is returning the status of 13-1-5.
+        # Workaround: instead of returning the result directly, we merge it with the input
+        # pipelines, prioritising the (correct) channel information from the channel map.
         return {
             pipeline_id: {**record, **pipeline_dict}
             for (pipeline_id, pipeline_dict), record in zip(pipelines.items(), records, strict=True)
@@ -295,7 +302,7 @@ class NewareAPI:
     def inquiredf(self, pipeline_ids: str | list[str] | None = None) -> dict[str, dict]:
         """Use the inquiredf command on the channel.
 
-        Returns information about the current running test like the test ID and number of datapoints.
+        Returns information about the latest test e.g. test ID and number of datapoints.
 
         Args:
             pipeline_ids (optional): pipeline IDs or list of pipeline IDs
@@ -332,7 +339,7 @@ class NewareAPI:
         }
 
     def downloadlog(self, pipeline_id: str) -> dict:
-        """Download the log information for the current running test. Only queries one channel at a time.
+        """Download the log information for latest test. Only queries one channel at a time.
 
         Args:
             pipeline_id: ID of the pipeline in format {devid}-{subdevid}-{chlid} e.g. 220-10-2

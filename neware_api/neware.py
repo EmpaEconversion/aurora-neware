@@ -10,6 +10,9 @@ from types import TracebackType
 
 from defusedxml import ElementTree
 
+# Possible commands from Neware's API
+# DONE connect, getdevinfo, getchlstatus, start, stop, download, downloadlog, inquire, inquiredf, clearflag, light
+# TODO: broadcaststop, continue, chl_ctrl, goto, downloadStepLayer, parallel, getparallel, resetalarm, reset
 
 def _auto_convert_type(value: str) -> int | float | str | None:
     """Try to automatically convert a string to float or int."""

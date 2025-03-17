@@ -32,7 +32,7 @@ def status(
 
     """
     with NewareAPI() as nw:
-        typer.echo(json.dumps(nw.inquire_channel(pipeline_ids)))
+        typer.echo(json.dumps(nw.inquire(pipeline_ids)))
 
 @app.command()
 def inquiredf(

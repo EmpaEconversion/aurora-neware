@@ -147,17 +147,17 @@ class NewareAPI:
         sample_ids: str | list[str],
         xml_files: str | Path | list[str] | list[Path],
         save_location: str = "C:\\Neware data\\",
-    ) -> str:
+    ) -> list[dict]:
         """Start designated payload file on a pipeline.
 
         Args:
-            pipeline: pipeline to start the job on
-            sampleid: barcode used in Newares BTS software
-            payload_xml_path: path to payload file
+            pipeline_ids: pipeline to start the job on
+            sample_ids: barcode used in Newares BTS software
+            xml_files: path to payload file
             save_location: location to save the data
 
         Returns:
-            str: XML string response
+            one dictionary per channel, key 'start' is 'ok' if job started, otherwise 'false'
 
         """
         # Check inputs
@@ -214,7 +214,7 @@ class NewareAPI:
         result = self.command(header + middle + footer)
         return _xml_to_records(result)
 
-    def get_status(self, pipeline_ids: str | list[str] | None = None) -> dict[str, dict]:
+    def getchlstatus(self, pipeline_ids: str | list[str] | None = None) -> dict[str, dict]:
         """Get status of pipeline(s).
 
         Args:
@@ -243,14 +243,13 @@ class NewareAPI:
             middle += (
                 f'<status ip="{pip["ip"]}" devtype="{pip["devtype"]}" '
                 f'devid="{pip["devid"]}" subdevid="{pip["subdevid"]}" '
-                'chlid="{pip["Channelid"]}">true</status>'
+                f'chlid="{pip["Channelid"]}">true</status>'
             )
         footer = "</list>"
         xml_string = self.command(header + middle + footer)
         records = _xml_to_records(xml_string)
 
-        # It seems like in the Neware response the subdevid is ALWAYS 1, this looks like a bug on
-        # their end.
+        # Sometimes the response subdevid is incorrectly 1
         # E.g. if you request the status of 13-5-5 it correctly gets the status of 13-5-5, but tells
         # you it is returning the status of 13-1-5.
         # Workaround: instead of returning the result directly, we merge it with the input
@@ -260,7 +259,7 @@ class NewareAPI:
             for (pipeline_id, pipeline_dict), record in zip(pipelines.items(), records, strict=True)
         }
 
-    def inquire_channel(self, pipeline_ids: str | list[str] | None = None) -> dict[str, dict]:
+    def inquire(self, pipeline_ids: str | list[str] | None = None) -> dict[str, dict]:
         """Inquire the status of the channel.
 
         Returns useful information like device id, cycle number, step, workstatus, current, voltage,
@@ -360,15 +359,19 @@ class NewareAPI:
         result = self.command(command)
         return _xml_to_records(result)
 
-    def download_data(self, pipeline: str) -> dict[str, list]:
-        """Download the data points for chlid.
+    def download(self, pipeline_id: str) -> dict[str, list]:
+        """Download the data points for a channel.
 
-        Uses the channel map to get the device id, subdevice id, and channel id.
+        Args:
+            pipeline_id: ID of the pipeline in format {devid}-{subdevid}-{chlid} e.g. 220-10-2
+
+        Returns:
+            Dictionary of lists of data from latest test
 
         """
         chunk_size = 1000
         data: list[dict] = []
-        pip = self.channel_map[pipeline]
+        pip = self.channel_map[pipeline_id]
         while len(data) % chunk_size == 0:
             cmd_string = (
                 "<cmd>download</cmd>"
@@ -398,7 +401,16 @@ class NewareAPI:
         self.channel_map = {f"{d['devid']}-{d['subdevid']}-{d['Channelid']}": d for d in devices}
 
     def light(self, pipeline_ids: str | list[str], light_on: bool = True) -> list[dict]:
-        """This doesn't seem to do anything."""
+        """Set light on channel.
+
+        Args:
+            pipeline_ids: pipeline IDs to light
+            light_on (default: True): whether to turn light on or off
+
+        Returns:
+            a dictionary per channel, key 'light' has value 'ok' if function worked
+
+        """
         if isinstance(pipeline_ids, str):
             pipelines = {pipeline_ids: self.channel_map[pipeline_ids]}
         elif isinstance(pipeline_ids, list):
@@ -416,7 +428,15 @@ class NewareAPI:
         return _xml_to_records(xml_string)
 
     def clearflag(self, pipeline_ids: str | list[str]) -> list[dict]:
-        """Clear flag on channel e.g. after buzzer alarm."""
+        """Clear flag on channel e.g. after buzzer alarm.
+
+        Args:
+            pipeline_ids: pipeline IDs to light e.g. "120-3-8"
+
+        Returns:
+            a dictionary per channel, key 'clearflag' has value 'ok' if function worked
+
+        """
         if isinstance(pipeline_ids, str):
             pipelines = {pipeline_ids: self.channel_map[pipeline_ids]}
         elif isinstance(pipeline_ids, list):

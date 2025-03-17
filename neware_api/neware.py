@@ -5,6 +5,7 @@ Neware Battery Testing System.
 """
 
 import socket
+from pathlib import Path
 from types import TracebackType
 
 from defusedxml import ElementTree
@@ -132,11 +133,11 @@ class NewareAPI:
             received += self.neware_socket.recv(2048).decode()
         return received[: -len(self.termination)]
 
-    def start_job(
+    def start(
         self,
-        pipeline: str,
-        sampleid: str,
-        payload_xml_path: str,
+        pipeline_ids: str | list[str],
+        sample_ids: str | list[str],
+        xml_files: str | Path | list[str] | list[Path],
         save_location: str = "C:\\Neware data\\",
     ) -> str:
         """Start designated payload file on a pipeline.
@@ -151,38 +152,59 @@ class NewareAPI:
             str: XML string response
 
         """
-        pip = self.channel_map[pipeline]
-        cmd = (
-            "<cmd>start</cmd>"
-            '<list count="1" DBC_CAN="1">'
-            f'<start ip="{pip["ip"]}" devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
-            f'subdevid="{pip["subdevid"]}" '
-            f'chlid="{pip["Channelid"]}" '
-            f'barcode="{sampleid}">'
-            f"{payload_xml_path}</start>"
+        # Check inputs
+        if isinstance(pipeline_ids, str):
+            pipelines = {pipeline_ids: self.channel_map[pipeline_ids]}
+        elif isinstance(pipeline_ids, list):
+            pipelines = {p: self.channel_map[p] for p in pipeline_ids}
+        if isinstance(sample_ids, str):
+            sample_ids = [sample_ids]
+        if isinstance(xml_files, str|Path):
+            xml_files=[xml_files]
+        if not isinstance(xml_files, list):
+            raise TypeError
+        xml_files = [Path(f) for f in xml_files]
+        if not all(f.exists() for f in xml_files):
+            raise FileNotFoundError
+
+        # Create and submit command XML string
+        header = f'<cmd>start</cmd><list count = "{len(pipelines)}">'
+        middle = ""
+        for pip, payload, sampleid in zip(pipelines.values(), xml_files, sample_ids, strict=True):
+
+            middle += (
+                f'<start ip="{pip["ip"]}" devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
+                f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}" barcode="{sampleid}">'
+                f'{payload}</start>'
+            )
+        footer = (
             f'<backup backupdir="{save_location}" remotedir="" filenametype="0" '
             'customfilename="" addtimewhenrepeat="0" createdirbydate="0" '
             'filetype="0" backupontime="0" backupontimeinterval="720" '
-            'backupfree="1" />'
-            "</list>"
+            'backupfree="1" /></list>"'
         )
-        return self.command(cmd)
+        cmd = header+middle+footer
+        print(cmd)
+        result = self.command(cmd)
+        return _xml_to_records(result)
 
-    def stop_job(self, pipelines: str | list[str] | tuple[str]) -> str:
+    def stop(self, pipeline_ids: str | list[str] | tuple[str]) -> str:
         """Stop job running on pipeline(s)."""
-        if isinstance(pipelines, str):
-            pipelines = [pipelines]
+        if isinstance(pipeline_ids, str):
+            pipelines = {pipeline_ids: self.channel_map[pipeline_ids]}
+        elif isinstance(pipeline_ids, list):
+            pipelines = {p: self.channel_map[p] for p in pipeline_ids}
 
         header = f'<cmd>stop</cmd><list count = "{len(pipelines)}">'
-        cmd_string = ""
-        for pipeline in pipelines:
-            pip = self.channel_map[pipeline]
-            cmd_string += (
-                f'\t\t<stop ip="{pip["ip"]}" devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
-                f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}">true</stop>\n'
+        middle = ""
+        for pip in pipelines.values():
+            middle += (
+                f'<stop ip="{pip["ip"]}" devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
+                f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}">true</stop>'
             )
         footer = "</list>"
-        return self.command(header + cmd_string + footer)
+        result = self.command(header + middle + footer)
+        return _xml_to_records(result)
 
     def get_status(self, pipeline_ids: str | list[str] | None = None) -> dict[str, dict]:
         """Get status of pipeline(s).
@@ -276,7 +298,7 @@ class NewareAPI:
         Returns information about the current running test like the test ID and number of datapoints.
 
         Args:
-            pipeline_ids (optional): pipeline IDs or list of pipeline Ids
+            pipeline_ids (optional): pipeline IDs or list of pipeline IDs
                 default: None, will get all pipeline IDs in the channel map
 
         Returns:
@@ -313,7 +335,7 @@ class NewareAPI:
         """Download the log information for the current running test. Only queries one channel at a time.
 
         Args:
-            pipeline_id: ID of the pipeline {devid}-{subdevid}-{chlid}
+            pipeline_id: ID of the pipeline in format {devid}-{subdevid}-{chlid} e.g. 220-10-2
 
         Returns:
             List of dictionaries containing log information.

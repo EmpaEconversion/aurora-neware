@@ -9,20 +9,13 @@ from neware_api import NewareAPI
 
 app = typer.Typer()
 
-
-@app.command()
-def start() -> None:
-    """Start the cycling process."""
-    typer.echo("Starting the cycling process for battery is NOT IMPLEMENTED YET.")
-
-
 @app.command()
 def status(pipeline_ids: Annotated[Optional[list[str]], typer.Argument()] = None) -> None:  # noqa: UP007
     """Get the status of the cycling process for all or selected pipelines.
 
     Example usage:
     >>> neware status
-    {"13-1-1": {"ip":127.0.0.1, "devtype": 27 ... }, "13-1-2": { ... }, ...
+    {"13-1-1": {"ip":127.0.0.1, "devtype": 27 ... }, "13-1-2": { ... }, ... }
     >>> neware status 13-1-5
     {"13-1-5":{...}}
     >>> neware status 13-1-5 14-3-5
@@ -50,6 +43,47 @@ def downloadlog(pipeline_id: str) -> None:
     """Download log data from specified channel."""
     with NewareAPI() as nw:
         typer.echo(json.dumps(nw.downloadlog(pipeline_id)))
+
+@app.command()
+def start(pipeline_id: str, sample_id: str, xml_file: str, save_location: str | None = "C:\\Neware data\\"):
+    """Start job on selected channel.
+
+    Example usage:
+    >>> neware start 220-10-1 "my_sample_name" "C:/path/to/job.xml"
+    [{"ip": "127.0.0.1", "devtype": 27, "devid": 220, "subdevid": 10, "chlid": 0, "start": "ok"}]
+    >>> neware start 220-5-3 "my_sample_name" "C:/path/to/invalid.xml"
+    [{"ip": "127.0.0.1", "devtype": 27, "devid": 220, "subdevid": 10, "chlid": 0, "start": "false"}]
+
+    In the second case, download and check the Neware logs for more information.
+
+    Args:
+        pipeline_id: pipeline ID in formation {devid}-{subdevid}-{chlii} e.g. 220-10-1
+        sample_id: to use as a barcode in the experiment
+        xml_file: path to a valid XML file with job information
+        save_location: where to save the backup files
+
+    """
+    with NewareAPI() as nw:
+        result = nw.start(
+            pipeline_id,
+            sample_id,
+            xml_file,
+            save_location=save_location,
+        )
+        typer.echo(json.dumps(result))
+
+@app.command()
+def stop(pipeline_id: str):
+    """Stop job on selected channel.
+
+    Example usage:
+    >>> neware stop 220-10-1
+    [{"ip": "127.0.0.1", "devtype": 27, "devid": 220, "subdevid": 10, "chlid": 1, "stop": "ok"}]
+
+    """
+    with NewareAPI() as nw:
+        result = nw.stop(pipeline_id)
+        typer.echo(json.dumps(result))
 
 if __name__ == "__main__":
     app()

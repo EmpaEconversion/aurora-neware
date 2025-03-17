@@ -57,6 +57,22 @@ def inquiredf(
         typer.echo(json.dumps(nw.inquiredf(pipeline_ids)))
 
 @app.command()
+def download(pipeline_id: str, n_points: int) -> None:
+    """Download log data from specified channel.
+
+    Args:
+        pipeline_id: pipeline ID in formation {devid}-{subdevid}-{chlii} e.g. 220-10-1
+        n_points: last n points to download, set to 0 to download all data (can be slow)
+
+    Example usage:
+    >>> neware download 220-10-1 10
+    {"cycleid": [488, ...], "volt": [4.11252689361572, ... ], "curr": [0.00271010375581682, ...], ...}
+
+    """
+    with NewareAPI() as nw:
+        typer.echo(json.dumps(nw.download(pipeline_id, n_points)))
+
+@app.command()
 def downloadlog(pipeline_id: str) -> None:
     """Download log data from specified channel.
 

@@ -359,28 +359,37 @@ class NewareAPI:
         result = self.command(command)
         return _xml_to_records(result)
 
-    def download(self, pipeline_id: str) -> dict[str, list]:
-        """Download the data points for a channel.
+    def download(self, pipeline_id: str, last_n_points: int = 10000) -> dict[str, list]:
+        """Download the data points for a channel. By default grabs the last 10000 points.
+
+        WARNING: for large amounts of data (>100k) this can take seconds.
+        Download and parse the .nda/.ndax file if speed matters.
 
         Args:
             pipeline_id: ID of the pipeline in format {devid}-{subdevid}-{chlid} e.g. 220-10-2
+            last_n_points: how many datapoints to download, set to 0 to get all data
 
         Returns:
             Dictionary of lists of data from latest test
 
         """
+        res = self.inquiredf(pipeline_id)
+        n_total = res[pipeline_id]["count"]
+        start = min(n_total, n_total - last_n_points if last_n_points else 0)
+        n_remaining = n_total - start
         chunk_size = 1000
         data: list[dict] = []
         pip = self.channel_map[pipeline_id]
-        while len(data) % chunk_size == 0:
+        while n_remaining>0:
             cmd_string = (
                 "<cmd>download</cmd>"
                 f'<download devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
                 f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}" '
-                f'auxid="0" testid="0" startpos="{len(data) + 1}" count="{chunk_size}"/>'
+                f'auxid="0" testid="0" startpos="{start + len(data) + 1}" count="{chunk_size}"/>'
             )
             xml_string = self.command(cmd_string)
             data += _xml_to_records(xml_string)
+            n_remaining -= chunk_size
         # Orient as dict of lists
         return _lod_to_dol(data)
 

@@ -9,9 +9,10 @@ from neware_api import NewareAPI
 
 app = typer.Typer()
 
+
 @app.command()
 def status(
-    pipeline_ids: Annotated[Optional[list[str]], typer.Argument()] = None  # noqa: UP007
+    pipeline_ids: Annotated[Optional[list[str]], typer.Argument()] = None,  # noqa: UP007
 ) -> None:
     """Get the status of the cycling process for all or selected pipelines.
 
@@ -34,9 +35,10 @@ def status(
     with NewareAPI() as nw:
         typer.echo(json.dumps(nw.inquire(pipeline_ids)))
 
+
 @app.command()
 def inquiredf(
-    pipeline_ids: Annotated[Optional[list[str]], typer.Argument()] = None  # noqa: UP007
+    pipeline_ids: Annotated[Optional[list[str]], typer.Argument()] = None,  # noqa: UP007
 ) -> None:
     """Get test information for all or selected pipelines.
 
@@ -56,6 +58,7 @@ def inquiredf(
     with NewareAPI() as nw:
         typer.echo(json.dumps(nw.inquiredf(pipeline_ids)))
 
+
 @app.command()
 def download(pipeline_id: str, n_points: int) -> None:
     """Download log data from specified channel.
@@ -72,6 +75,7 @@ def download(pipeline_id: str, n_points: int) -> None:
     with NewareAPI() as nw:
         typer.echo(json.dumps(nw.download(pipeline_id, n_points)))
 
+
 @app.command()
 def downloadlog(pipeline_id: str) -> None:
     """Download log data from specified channel.
@@ -87,13 +91,9 @@ def downloadlog(pipeline_id: str) -> None:
     with NewareAPI() as nw:
         typer.echo(json.dumps(nw.downloadlog(pipeline_id)))
 
+
 @app.command()
-def start(
-    pipeline_id: str,
-    sample_id: str,
-    xml_file: str,
-    save_location: str | None = "C:\\Neware data\\"
-) -> None:
+def start(pipeline_id: str, sample_id: str, xml_file: str, save_location: str | None = "C:\\Neware data\\") -> None:
     """Start job on selected channel.
 
     Example usage:
@@ -120,6 +120,7 @@ def start(
         )
         typer.echo(json.dumps(result))
 
+
 @app.command()
 def stop(pipeline_id: str) -> None:
     """Stop job on selected channel.
@@ -133,6 +134,7 @@ def stop(pipeline_id: str) -> None:
         result = nw.stop(pipeline_id)
         typer.echo(json.dumps(result))
 
+
 @app.command()
 def clearflag(pipeline_ids: Annotated[list[str], typer.Argument()]) -> None:
     """Clear flag on selected channel(s).
@@ -144,6 +146,7 @@ def clearflag(pipeline_ids: Annotated[list[str], typer.Argument()]) -> None:
     """
     with NewareAPI() as nw:
         typer.echo(json.dumps(nw.clearflag(pipeline_ids)))
+
 
 if __name__ == "__main__":
     app()

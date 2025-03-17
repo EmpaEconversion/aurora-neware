@@ -14,6 +14,7 @@ from defusedxml import ElementTree
 # DONE connect, getdevinfo, getchlstatus, start, stop, download, downloadlog, inquire, inquiredf, clearflag, light
 # TODO: broadcaststop, continue, chl_ctrl, goto, downloadStepLayer, parallel, getparallel, resetalarm, reset
 
+
 def _auto_convert_type(value: str) -> int | float | str | None:
     """Try to automatically convert a string to float or int."""
     if value == "--":
@@ -99,12 +100,7 @@ class NewareAPI:
     def connect(self) -> None:
         """Establish the TCP connection."""
         self.neware_socket.connect((self.ip, self.port))
-        connect = (
-            "<cmd>connect</cmd>"
-            "<username>admin</username>"
-            "<password>neware</password>"
-            "<type>bfgs</type>"
-        )
+        connect = "<cmd>connect</cmd><username>admin</username><password>neware</password><type>bfgs</type>"
         self.command(connect)
         self.update_channel_map()
 
@@ -167,8 +163,8 @@ class NewareAPI:
             pipelines = {p: self.channel_map[p] for p in pipeline_ids}
         if isinstance(sample_ids, str):
             sample_ids = [sample_ids]
-        if isinstance(xml_files, str|Path):
-            xml_files=[xml_files]
+        if isinstance(xml_files, str | Path):
+            xml_files = [xml_files]
         if not isinstance(xml_files, list):
             raise TypeError
         xml_files = [Path(f) for f in xml_files]
@@ -179,11 +175,10 @@ class NewareAPI:
         header = f'<cmd>start</cmd><list count = "{len(pipelines)}">'
         middle = ""
         for pip, payload, sampleid in zip(pipelines.values(), xml_files, sample_ids, strict=True):
-
             middle += (
                 f'<start ip="{pip["ip"]}" devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
                 f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}" barcode="{sampleid}">'
-                f'{payload}</start>'
+                f"{payload}</start>"
             )
         footer = (
             f'<backup backupdir="{save_location}" remotedir="" filenametype="0" '
@@ -191,7 +186,7 @@ class NewareAPI:
             'filetype="0" backupontime="0" backupontimeinterval="720" '
             'backupfree="1" /></list>"'
         )
-        cmd = header+middle+footer
+        cmd = header + middle + footer
         print(cmd)
         result = self.command(cmd)
         return _xml_to_records(result)
@@ -352,7 +347,7 @@ class NewareAPI:
         """
         pip = self.channel_map[pipeline_id]
         command = (
-            '<cmd>downloadlog</cmd>'
+            "<cmd>downloadlog</cmd>"
             f'<download devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
             f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}" testid="0"/>'
         )
@@ -380,7 +375,7 @@ class NewareAPI:
         chunk_size = 1000
         data: list[dict] = []
         pip = self.channel_map[pipeline_id]
-        while n_remaining>0:
+        while n_remaining > 0:
             cmd_string = (
                 "<cmd>download</cmd>"
                 f'<download devtype="{pip["devtype"]}" devid="{pip["devid"]}" '

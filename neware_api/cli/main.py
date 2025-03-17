@@ -38,13 +38,36 @@ def status(
 def inquiredf(
     pipeline_ids: Annotated[Optional[list[str]], typer.Argument()] = None  # noqa: UP007
 ) -> None:
-    """Get test information from channels."""
+    """Get test information for all or selected pipelines.
+
+    Example usage:
+    >>> neware inquiredf
+    {"120-1-1": {"testid": 20, "count": 754268, ... }, "120-1-2": {"testid": 21, "count": 721343, ... }, ... }
+    >>> neware status 220-2-2
+    {"220-2-2": {"devtype": 27, "devid": 220, "subdevid": 2, "chlid": 2, "testid": 123, "count": 416605, ... }}
+    >>> neware status 120-1-5 120-1-6
+    {"120-1-5": {...}, "120-1-6": {...}}
+
+    Args:
+        pipeline_ids (optional): list of pipeline IDs to get status from
+            will use the full channel map if not provided
+
+    """
     with NewareAPI() as nw:
         typer.echo(json.dumps(nw.inquiredf(pipeline_ids)))
 
 @app.command()
 def downloadlog(pipeline_id: str) -> None:
-    """Download log data from specified channel."""
+    """Download log data from specified channel.
+
+    Args:
+        pipeline_id: pipeline ID in formation {devid}-{subdevid}-{chlii} e.g. 220-10-1
+
+    Example usage:
+    >>> neware downloadlog 220-10-1
+    [{"seqid": 1, "log_code": 100000, "atime": "2024-12-12 15:31:01"}, ... ]
+
+    """
     with NewareAPI() as nw:
         typer.echo(json.dumps(nw.downloadlog(pipeline_id)))
 

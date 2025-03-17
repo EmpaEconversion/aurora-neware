@@ -1,6 +1,7 @@
 """CLI for the Neware battery cycling API."""
 
 import json
+import re
 from typing import Annotated, Optional
 
 import typer

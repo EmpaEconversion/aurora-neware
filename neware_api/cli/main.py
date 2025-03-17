@@ -94,5 +94,17 @@ def stop(pipeline_id: str) -> None:
         result = nw.stop(pipeline_id)
         typer.echo(json.dumps(result))
 
+@app.command()
+def clearflag(pipeline_ids: Annotated[list[str], typer.Argument()]) -> None:
+    """Clear flag on selected channel(s).
+
+    Example usage:
+    >>> neware clearflag 220-10-1
+    [{"ip": "127.0.0.1", "devtype": 27, "devid": 220, "subdevid": 10, "chlid": 1, "clearflag": "ok"}]
+
+    """
+    with NewareAPI() as nw:
+        typer.echo(json.dumps(nw.clearflag(pipeline_ids)))
+
 if __name__ == "__main__":
     app()

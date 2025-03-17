@@ -396,3 +396,38 @@ class NewareAPI:
         """Update the channel map with the latest device information."""
         devices = self.device_info()
         self.channel_map = {f"{d['devid']}-{d['subdevid']}-{d['Channelid']}": d for d in devices}
+
+    def light(self, pipeline_ids: str | list[str], light_on: bool = True) -> list[dict]:
+        """This doesn't seem to do anything."""
+        if isinstance(pipeline_ids, str):
+            pipelines = {pipeline_ids: self.channel_map[pipeline_ids]}
+        elif isinstance(pipeline_ids, list):
+            pipelines = {p: self.channel_map[p] for p in pipeline_ids}
+        light_str = "true" if light_on else "false"
+        header = f'<cmd>light</cmd><list count = "{len(pipelines)}">'
+        middle = ""
+        for pip in pipelines.values():
+            middle += (
+                f'<light ip="{pip["ip"]}" devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
+                f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}">{light_str}</light>'
+            )
+        footer = "</list>"
+        xml_string = self.command(header + middle + footer)
+        return _xml_to_records(xml_string)
+
+    def clearflag(self, pipeline_ids: str | list[str]) -> list[dict]:
+        """Clear flag on channel e.g. after buzzer alarm."""
+        if isinstance(pipeline_ids, str):
+            pipelines = {pipeline_ids: self.channel_map[pipeline_ids]}
+        elif isinstance(pipeline_ids, list):
+            pipelines = {p: self.channel_map[p] for p in pipeline_ids}
+        header = f'<cmd>clearflag</cmd><list count = "{len(pipelines)}">'
+        middle = ""
+        for pip in pipelines.values():
+            middle += (
+                f'<clearflag ip="{pip["ip"]}" devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
+                f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}">true</clearflag>'
+            )
+        footer = "</list>"
+        xml_string = self.command(header + middle + footer)
+        return _xml_to_records(xml_string)

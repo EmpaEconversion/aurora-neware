@@ -1,7 +1,6 @@
 """CLI for the Neware battery cycling API."""
 
 import json
-import re
 from typing import Annotated, Optional
 
 import typer
@@ -29,9 +28,6 @@ def status(
         pipeline_ids (optional): list of pipeline IDs to get status from
             will use the full channel map if not provided
 
-    Raises:
-        KeyError if pipeline ID not in channel map
-
     """
     with NewareAPI() as nw:
         typer.echo(json.dumps(nw.inquire(pipeline_ids)))
@@ -52,7 +48,7 @@ def inquiredf(
     {"120-1-5": {...}, "120-1-6": {...}}
 
     Args:
-        pipeline_ids (optional): list of pipeline IDs to get status from
+        pipeline_ids (optional): list of pipeline IDs in format {devid}-{subdevid}-{chlid} e.g. 220-10-1 220-10-2
             will use the full channel map if not provided
 
     """
@@ -62,15 +58,15 @@ def inquiredf(
 
 @app.command()
 def download(pipeline_id: str, n_points: int) -> None:
-    """Download log data from specified channel.
-
-    Args:
-        pipeline_id: pipeline ID in formation {devid}-{subdevid}-{chlii} e.g. 220-10-1
-        n_points: last n points to download, set to 0 to download all data (can be slow)
+    """Download data (voltage, current, time, etc.) from specified channel.
 
     Example usage:
     >>> neware download 220-10-1 10
     {"cycleid": [488, ...], "volt": [4.11252689361572, ... ], "curr": [0.00271010375581682, ...], ...}
+
+    Args:
+        pipeline_id: pipeline ID in format {devid}-{subdevid}-{chlid} e.g. 220-10-1
+        n_points: last n points to download, set to 0 to download all data (can be slow)
 
     """
     with NewareAPI() as nw:
@@ -79,14 +75,14 @@ def download(pipeline_id: str, n_points: int) -> None:
 
 @app.command()
 def downloadlog(pipeline_id: str) -> None:
-    """Download log data from specified channel.
-
-    Args:
-        pipeline_id: pipeline ID in formation {devid}-{subdevid}-{chlii} e.g. 220-10-1
+    """Download log information from specified channel.
 
     Example usage:
     >>> neware downloadlog 220-10-1
     [{"seqid": 1, "log_code": 100000, "atime": "2024-12-12 15:31:01"}, ... ]
+
+    Args:
+        pipeline_id: pipeline ID in format {devid}-{subdevid}-{chlid} e.g. 220-10-1
 
     """
     with NewareAPI() as nw:
@@ -106,7 +102,7 @@ def start(pipeline_id: str, sample_id: str, xml_file: str, save_location: str | 
     In the second case, download and check the Neware logs for more information.
 
     Args:
-        pipeline_id: pipeline ID in formation {devid}-{subdevid}-{chlii} e.g. 220-10-1
+        pipeline_id: pipeline ID in format {devid}-{subdevid}-{chlid} e.g. 220-10-1
         sample_id: to use as a barcode in the experiment
         xml_file: path to a valid XML file with job information
         save_location: where to save the backup files
@@ -130,6 +126,9 @@ def stop(pipeline_id: str) -> None:
     >>> neware stop 220-10-1
     [{"ip": "127.0.0.1", "devtype": 27, "devid": 220, "subdevid": 10, "chlid": 1, "stop": "ok"}]
 
+    Args:
+        pipeline_id: pipeline ID in format {devid}-{subdevid}-{chlid} e.g. 220-10-1
+
     """
     with NewareAPI() as nw:
         result = nw.stop(pipeline_id)
@@ -143,6 +142,9 @@ def clearflag(pipeline_ids: Annotated[list[str], typer.Argument()]) -> None:
     Example usage:
     >>> neware clearflag 220-10-1
     [{"ip": "127.0.0.1", "devtype": 27, "devid": 220, "subdevid": 10, "chlid": 1, "clearflag": "ok"}]
+
+    Args:
+        pipeline_ids: list of pipeline IDs in format {devid}-{subdevid}-{chlii} e.g. 220-10-1 220-10-2
 
     """
     with NewareAPI() as nw:

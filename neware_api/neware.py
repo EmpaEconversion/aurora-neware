@@ -102,7 +102,7 @@ class NewareAPI:
         self.neware_socket.connect((self.ip, self.port))
         connect = "<cmd>connect</cmd><username>admin</username><password>neware</password><type>bfgs</type>"
         self.command(connect)
-        self.update_channel_map()
+        self.channel_map = self.getdevinfo()
 
     def disconnect(self) -> None:
         """Close the port."""
@@ -126,6 +126,20 @@ class NewareAPI:
     def __del__(self) -> None:
         """Close the port when the object is deleted."""
         self.disconnect()
+
+    def get_pipeline(self, pipeline_id: str) -> dict:
+        """Get the channel information for a single pipeline."""
+        try:
+            return self.channel_map[pipeline_id]
+        except KeyError as e:
+            msg = (
+                f"Pipeline ID {pipeline_id} not in channel map. "
+                "Pipeline IDs are in the format {device ID}-{sub-device ID}-{channel ID}. "
+                "On Neware cyclers these are usually integers e.g. 120-10-8 is device 120, sub-device 10, channel 8. "
+                "You can check available pipelines with getdevinfo() or the 'neware status' CLI command."
+            )
+            raise KeyError(msg) from e
+
 
     def command(self, cmd: str) -> str:
         """Send a command to the device, and return the response."""
@@ -158,9 +172,9 @@ class NewareAPI:
         """
         # Check inputs
         if isinstance(pipeline_ids, str):
-            pipelines = {pipeline_ids: self.channel_map[pipeline_ids]}
+            pipelines = {pipeline_ids: self.get_pipeline(pipeline_ids)}
         elif isinstance(pipeline_ids, list):
-            pipelines = {p: self.channel_map[p] for p in pipeline_ids}
+            pipelines = {p: self.get_pipeline(p) for p in pipeline_ids}
         if isinstance(sample_ids, str):
             sample_ids = [sample_ids]
         if isinstance(xml_files, list):
@@ -195,9 +209,9 @@ class NewareAPI:
     def stop(self, pipeline_ids: str | list[str] | tuple[str]) -> list[dict]:
         """Stop job running on pipeline(s)."""
         if isinstance(pipeline_ids, str):
-            pipelines = {pipeline_ids: self.channel_map[pipeline_ids]}
+            pipelines = {pipeline_ids: self.get_pipeline(pipeline_ids)}
         elif isinstance(pipeline_ids, list):
-            pipelines = {p: self.channel_map[p] for p in pipeline_ids}
+            pipelines = {p: self.get_pipeline(p) for p in pipeline_ids}
 
         header = f'<cmd>stop</cmd><list count = "{len(pipelines)}">'
         middle = ""
@@ -228,9 +242,9 @@ class NewareAPI:
         if not pipeline_ids:  # If no argument passed use all pipelines
             pipelines = self.channel_map
         if isinstance(pipeline_ids, str):
-            pipelines = {pipeline_ids: self.channel_map[pipeline_ids]}
+            pipelines = {pipeline_ids: self.get_pipeline(pipeline_ids)}
         elif isinstance(pipeline_ids, list):
-            pipelines = {p: self.channel_map[p] for p in pipeline_ids}
+            pipelines = {p: self.get_pipeline(p) for p in pipeline_ids}
 
         # Create and submit command XML string
         header = f'<cmd>getchlstatus</cmd><list count = "{len(pipelines)}">'
@@ -274,9 +288,9 @@ class NewareAPI:
         if not pipeline_ids:  # If no argument passed use all pipelines
             pipelines = self.channel_map
         if isinstance(pipeline_ids, str):
-            pipelines = {pipeline_ids: self.channel_map[pipeline_ids]}
+            pipelines = {pipeline_ids: self.get_pipeline(pipeline_ids)}
         elif isinstance(pipeline_ids, list):
-            pipelines = {p: self.channel_map[p] for p in pipeline_ids}
+            pipelines = {p: self.get_pipeline(p) for p in pipeline_ids}
 
         # Create and submit command XML string
         header = f'<cmd>inquire</cmd><list count = "{len(pipelines)}">'
@@ -315,9 +329,9 @@ class NewareAPI:
         if not pipeline_ids:  # If no argument passed use all pipelines
             pipelines = self.channel_map
         if isinstance(pipeline_ids, str):
-            pipelines = {pipeline_ids: self.channel_map[pipeline_ids]}
+            pipelines = {pipeline_ids: self.get_pipeline(pipeline_ids)}
         elif isinstance(pipeline_ids, list):
-            pipelines = {p: self.channel_map[p] for p in pipeline_ids}
+            pipelines = {p: self.get_pipeline(p) for p in pipeline_ids}
 
         # Create and submit command XML string
         header = f'<cmd>inquiredf</cmd><list count = "{len(pipelines)}">'
@@ -346,7 +360,7 @@ class NewareAPI:
             List of dictionaries containing log information.
 
         """
-        pip = self.channel_map[pipeline_id]
+        pip = self.get_pipeline(pipeline_id)
         command = (
             "<cmd>downloadlog</cmd>"
             f'<download devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
@@ -375,7 +389,7 @@ class NewareAPI:
         n_remaining = n_total - start
         chunk_size = 1000
         data: list[dict] = []
-        pip = self.channel_map[pipeline_id]
+        pip = self.get_pipeline(pipeline_id)
         while n_remaining > 0:
             cmd_string = (
                 "<cmd>download</cmd>"
@@ -389,7 +403,7 @@ class NewareAPI:
         # Orient as dict of lists
         return _lod_to_dol(data)
 
-    def device_info(self) -> list[dict]:
+    def getdevinfo(self) -> dict[str, dict]:
         """Get device information.
 
         Returns:
@@ -398,12 +412,11 @@ class NewareAPI:
         """
         command = "<cmd>getdevinfo</cmd>"
         xml_string = self.command(command)
-        return _xml_to_records(xml_string, "middle")
-
-    def update_channel_map(self) -> None:
-        """Update the channel map with the latest device information."""
-        devices = self.device_info()
-        self.channel_map = {f"{d['devid']}-{d['subdevid']}-{d['Channelid']}": d for d in devices}
+        devices = _xml_to_records(xml_string, "middle")
+        if not devices:
+            msg = "No devices found. Check that devices are working in BTS Client."
+            raise ValueError(msg)
+        return {f"{d['devid']}-{d['subdevid']}-{d['Channelid']}": d for d in devices}
 
     def light(self, pipeline_ids: str | list[str], light_on: bool = True) -> list[dict]:
         """Set light on channel.
@@ -417,9 +430,9 @@ class NewareAPI:
 
         """
         if isinstance(pipeline_ids, str):
-            pipelines = {pipeline_ids: self.channel_map[pipeline_ids]}
+            pipelines = {pipeline_ids: self.get_pipeline(pipeline_ids)}
         elif isinstance(pipeline_ids, list):
-            pipelines = {p: self.channel_map[p] for p in pipeline_ids}
+            pipelines = {p: self.get_pipeline(p) for p in pipeline_ids}
         light_str = "true" if light_on else "false"
         header = f'<cmd>light</cmd><list count = "{len(pipelines)}">'
         middle = ""
@@ -443,9 +456,9 @@ class NewareAPI:
 
         """
         if isinstance(pipeline_ids, str):
-            pipelines = {pipeline_ids: self.channel_map[pipeline_ids]}
+            pipelines = {pipeline_ids: self.get_pipeline(pipeline_ids)}
         elif isinstance(pipeline_ids, list):
-            pipelines = {p: self.channel_map[p] for p in pipeline_ids}
+            pipelines = {p: self.get_pipeline(p) for p in pipeline_ids}
         header = f'<cmd>clearflag</cmd><list count = "{len(pipelines)}">'
         middle = ""
         for pip in pipelines.values():

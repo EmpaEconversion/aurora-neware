@@ -191,7 +191,7 @@ class NewareAPI:
         result = self.command(cmd)
         return _xml_to_records(result)
 
-    def stop(self, pipeline_ids: str | list[str] | tuple[str]) -> str:
+    def stop(self, pipeline_ids: str | list[str] | tuple[str]) -> list[dict]:
         """Stop job running on pipeline(s)."""
         if isinstance(pipeline_ids, str):
             pipelines = {pipeline_ids: self.channel_map[pipeline_ids]}
@@ -335,7 +335,7 @@ class NewareAPI:
             for (pipeline_id, pipeline_dict), record in zip(pipelines.items(), records, strict=True)
         }
 
-    def downloadlog(self, pipeline_id: str) -> dict:
+    def downloadlog(self, pipeline_id: str) -> list[dict]:
         """Download the log information for latest test. Only queries one channel at a time.
 
         Args:

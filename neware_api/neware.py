@@ -163,18 +163,19 @@ class NewareAPI:
             pipelines = {p: self.channel_map[p] for p in pipeline_ids}
         if isinstance(sample_ids, str):
             sample_ids = [sample_ids]
+        if isinstance(xml_files, list):
+            xml_filepaths = [Path(f) for f in xml_files]
         if isinstance(xml_files, str | Path):
-            xml_files = [xml_files]
+            xml_filepaths = [Path(xml_files)]
         if not isinstance(xml_files, list):
             raise TypeError
-        xml_files = [Path(f) for f in xml_files]
-        if not all(f.exists() for f in xml_files):
+        if not all(f.exists() for f in xml_filepaths):
             raise FileNotFoundError
 
         # Create and submit command XML string
         header = f'<cmd>start</cmd><list count = "{len(pipelines)}">'
         middle = ""
-        for pip, payload, sampleid in zip(pipelines.values(), xml_files, sample_ids, strict=True):
+        for pip, payload, sampleid in zip(pipelines.values(), xml_filepaths, sample_ids, strict=True):
             middle += (
                 f'<start ip="{pip["ip"]}" devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
                 f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}" barcode="{sampleid}">'

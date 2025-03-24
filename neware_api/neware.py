@@ -4,6 +4,7 @@ Contains a single class NewareAPI that provides methods to interact with the
 Neware Battery Testing System.
 """
 
+import re
 import socket
 from pathlib import Path
 from types import TracebackType
@@ -11,8 +12,11 @@ from types import TracebackType
 from defusedxml import ElementTree
 
 # Possible commands from Neware's API
-# DONE connect, getdevinfo, getchlstatus, start, stop, download, downloadlog, inquire, inquiredf, clearflag, light
-# TODO: broadcaststop, continue, chl_ctrl, goto, downloadStepLayer, parallel, getparallel, resetalarm, reset
+# DONE
+# connect, getdevinfo, getchlstatus, start, stop, download, downloadlog, inquire, inquiredf,
+# clearflag, light, downloadStepLayer
+# TODO:
+# broadcaststop, continue, chl_ctrl, goto, parallel, getparallel, resetalarm, reset
 
 
 def _auto_convert_type(value: str) -> int | float | str | None:
@@ -139,7 +143,6 @@ class NewareAPI:
                 "You can check available pipelines with getdevinfo() or the 'neware status' CLI command."
             )
             raise KeyError(msg) from e
-
 
     def command(self, cmd: str) -> str:
         """Send a command to the device, and return the response."""
@@ -468,3 +471,40 @@ class NewareAPI:
         footer = "</list>"
         xml_string = self.command(header + middle + footer)
         return _xml_to_records(xml_string)
+
+    def get_steps(self, pipeline_id: str) -> list[dict]:
+        """Get the step layer of data, such as step index and type, start and end time etc."""
+        pip = self.get_pipeline(pipeline_id)
+        command = (
+            f"<cmd>downloadStepLayer</cmd>"
+            f'<downloadStepLayer devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
+            f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}" />'
+        )
+        xml_string = self.command(command)
+        return _xml_to_records(xml_string)
+
+    def get_testid(self, pipeline_ids: str | list[str] | None) -> dict[dict]:
+        """Get the test ID of pipelines."""
+        if pipeline_ids is None:
+            pipelines = self.channel_map
+        if isinstance(pipeline_ids, str):
+            pipelines = {pipeline_ids: self.get_pipeline(pipeline_ids)}
+        elif isinstance(pipeline_ids, list):
+            pipelines = {p: self.get_pipeline(p) for p in pipeline_ids}
+        # Download 0 data points to find test ID
+        for pip in pipelines.values():
+            command = (
+                "<cmd>download</cmd>"
+                f'<download devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
+                f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}" '
+                f'auxid="0" testid="0" startpos="0" count="0"/>'
+            )
+            resp = self.command(command)
+            match = re.search(r'(?<=testid=")\d+(?=")', resp)
+            if match:
+                # Add test number to the channel map info
+                pip["test_id"] = int(match.group())
+                pip["full_test_id"] = f"{pip['devid']}-{pip['subdevid']}-{pip['Channelid']}-{int(match.group())}"
+            else:
+                raise ValueError
+        return pipelines

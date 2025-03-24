@@ -151,5 +151,19 @@ def clearflag(pipeline_ids: Annotated[list[str], typer.Argument()]) -> None:
         typer.echo(json.dumps(nw.clearflag(pipeline_ids)))
 
 
-if __name__ == "__main__":
-    app()
+@app.command()
+def testid(pipeline_ids: Annotated[list[str] | None, typer.Argument()] = None) -> None:
+    """Get the latest test ID from selected pipeline.
+
+    Example usage:
+    >>> neware testid 220-1-1
+    {"220-1-1": {"ip": "127.0.0.1", "devtype": 27, "devid": 220, "subdevid": 1, "Channelid": 1,
+    "channel": "true", "test_id": 66, "full_test_id": "220-1-1-66"}}
+
+    Args:
+        pipeline_ids (optional): list of pipeline IDs in format {devid}-{subdevid}-{chlid} e.g. 220-10-1 220-10-2
+            will use the full channel map if not provided (warning: this function is slow compared to status)
+
+    """
+    with NewareAPI() as nw:
+        typer.echo(json.dumps(nw.get_testid(pipeline_ids)))

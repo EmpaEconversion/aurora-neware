@@ -202,7 +202,6 @@ class NewareAPI:
             'backupfree="1" /></list>"'
         )
         cmd = header + middle + footer
-        print(cmd)
         result = self.command(cmd)
         return _xml_to_records(result)
 

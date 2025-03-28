@@ -10,11 +10,12 @@ from neware_api import NewareAPI
 app = typer.Typer()
 
 IndentOption = Annotated[int | None, typer.Option(help="Indent the output.")]
+PipelinesArgument = Annotated[list[str] | None, typer.Argument()]
 
 
 @app.command()
 def status(
-    pipeline_ids: Annotated[list[str] | None, typer.Argument()] = None,
+    pipeline_ids: PipelinesArgument = None,
     indent: IndentOption = None,
 ) -> None:
     """Get the status of the cycling process for all or selected pipelines.
@@ -39,7 +40,7 @@ def status(
 
 @app.command()
 def inquiredf(
-    pipeline_ids: Annotated[list[str] | None, typer.Argument()] = None,
+    pipeline_ids: PipelinesArgument = None,
     indent: IndentOption = None,
 ) -> None:
     """Get test information for all or selected pipelines.
@@ -161,7 +162,7 @@ def clearflag(pipeline_ids: Annotated[list[str], typer.Argument()], indent: Inde
 
 
 @app.command()
-def testid(pipeline_ids: Annotated[list[str] | None, typer.Argument()] = None, indent: IndentOption = None) -> None:
+def testid(pipeline_ids: PipelinesArgument = None, indent: IndentOption = None) -> None:
     """Get the latest test ID from selected pipeline.
 
     Example usage:

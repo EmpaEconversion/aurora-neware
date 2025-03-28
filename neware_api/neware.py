@@ -4,10 +4,19 @@ Contains a single class NewareAPI that provides methods to interact with the
 Neware Battery Testing System.
 """
 
+import re
 import socket
+from pathlib import Path
 from types import TracebackType
 
 from defusedxml import ElementTree
+
+# Possible commands from Neware's API
+# DONE
+# connect, getdevinfo, getchlstatus, start, stop, download, downloadlog, inquire, inquiredf,
+# clearflag, light, downloadStepLayer
+# TODO:
+# broadcaststop, continue, chl_ctrl, goto, parallel, getparallel, resetalarm, reset
 
 
 def _auto_convert_type(value: str) -> int | float | str | None:
@@ -97,7 +106,7 @@ class NewareAPI:
         self.neware_socket.connect((self.ip, self.port))
         connect = "<cmd>connect</cmd><username>admin</username><password>neware</password><type>bfgs</type>"
         self.command(connect)
-        self.update_channel_map()
+        self.channel_map = self.getdevinfo()
 
     def disconnect(self) -> None:
         """Close the port."""
@@ -122,6 +131,19 @@ class NewareAPI:
         """Close the port when the object is deleted."""
         self.disconnect()
 
+    def get_pipeline(self, pipeline_id: str) -> dict:
+        """Get the channel information for a single pipeline."""
+        try:
+            return self.channel_map[pipeline_id]
+        except KeyError as e:
+            msg = (
+                f"Pipeline ID {pipeline_id} not in channel map. "
+                "Pipeline IDs are in the format {device ID}-{sub-device ID}-{channel ID}. "
+                "On Neware cyclers these are usually integers e.g. 120-10-8 is device 120, sub-device 10, channel 8. "
+                "You can check available pipelines with getdevinfo() or the 'neware status' CLI command."
+            )
+            raise KeyError(msg) from e
+
     def command(self, cmd: str) -> str:
         """Send a command to the device, and return the response."""
         self.neware_socket.sendall(
@@ -132,59 +154,79 @@ class NewareAPI:
             received += self.neware_socket.recv(2048).decode()
         return received[: -len(self.termination)]
 
-    def start_job(
+    def start(
         self,
-        pipeline: str,
-        sampleid: str,
-        payload_xml_path: str,
+        pipeline_ids: str | list[str],
+        sample_ids: str | list[str],
+        xml_files: str | Path | list[str] | list[Path],
         save_location: str = "C:\\Neware data\\",
-    ) -> str:
+    ) -> list[dict]:
         """Start designated payload file on a pipeline.
 
         Args:
-            pipeline: pipeline to start the job on
-            sampleid: barcode used in Newares BTS software
-            payload_xml_path: path to payload file
+            pipeline_ids: pipeline to start the job on
+            sample_ids: barcode used in Newares BTS software
+            xml_files: path to payload file
             save_location: location to save the data
 
         Returns:
-            str: XML string response
+            one dictionary per channel, key 'start' is 'ok' if job started, otherwise 'false'
 
         """
-        pip = self.channel_map[pipeline]
-        cmd = (
-            "<cmd>start</cmd>"
-            '<list count="1" DBC_CAN="1">'
-            f'<start ip="{pip["ip"]}" devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
-            f'subdevid="{pip["subdevid"]}" '
-            f'chlid="{pip["Channelid"]}" '
-            f'barcode="{sampleid}">'
-            f"{payload_xml_path}</start>"
+        # Check inputs
+        if isinstance(pipeline_ids, str):
+            pipelines = {pipeline_ids: self.get_pipeline(pipeline_ids)}
+        elif isinstance(pipeline_ids, list):
+            pipelines = {p: self.get_pipeline(p) for p in pipeline_ids}
+        if isinstance(sample_ids, str):
+            sample_ids = [sample_ids]
+        if isinstance(xml_files, list):
+            xml_filepaths = [Path(f) for f in xml_files]
+        if isinstance(xml_files, str | Path):
+            xml_filepaths = [Path(xml_files)]
+        if not isinstance(xml_files, list):
+            raise TypeError
+        if not all(f.exists() for f in xml_filepaths):
+            raise FileNotFoundError
+
+        # Create and submit command XML string
+        header = f'<cmd>start</cmd><list count = "{len(pipelines)}">'
+        middle = ""
+        for pip, payload, sampleid in zip(pipelines.values(), xml_filepaths, sample_ids, strict=True):
+            middle += (
+                f'<start ip="{pip["ip"]}" devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
+                f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}" barcode="{sampleid}">'
+                f"{payload}</start>"
+            )
+        footer = (
             f'<backup backupdir="{save_location}" remotedir="" filenametype="0" '
             'customfilename="" addtimewhenrepeat="0" createdirbydate="0" '
             'filetype="0" backupontime="0" backupontimeinterval="720" '
-            'backupfree="1" />'
-            "</list>"
+            'backupfree="1" /></list>"'
         )
-        return self.command(cmd)
+        cmd = header + middle + footer
+        result = self.command(cmd)
+        return _xml_to_records(result)
 
-    def stop_job(self, pipelines: str | list[str] | tuple[str]) -> str:
+    def stop(self, pipeline_ids: str | list[str] | tuple[str]) -> list[dict]:
         """Stop job running on pipeline(s)."""
-        if isinstance(pipelines, str):
-            pipelines = [pipelines]
+        if isinstance(pipeline_ids, str):
+            pipelines = {pipeline_ids: self.get_pipeline(pipeline_ids)}
+        elif isinstance(pipeline_ids, list):
+            pipelines = {p: self.get_pipeline(p) for p in pipeline_ids}
 
         header = f'<cmd>stop</cmd><list count = "{len(pipelines)}">'
-        cmd_string = ""
-        for pipeline in pipelines:
-            pip = self.channel_map[pipeline]
-            cmd_string += (
-                f'\t\t<stop ip="{pip["ip"]}" devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
-                f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}">true</stop>\n'
+        middle = ""
+        for pip in pipelines.values():
+            middle += (
+                f'<stop ip="{pip["ip"]}" devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
+                f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}">true</stop>'
             )
         footer = "</list>"
-        return self.command(header + cmd_string + footer)
+        result = self.command(header + middle + footer)
+        return _xml_to_records(result)
 
-    def get_status(self, pipeline_ids: str | list[str] | None = None) -> dict[str, dict]:
+    def getchlstatus(self, pipeline_ids: str | list[str] | None = None) -> dict[str, dict]:
         """Get status of pipeline(s).
 
         Args:
@@ -202,9 +244,9 @@ class NewareAPI:
         if not pipeline_ids:  # If no argument passed use all pipelines
             pipelines = self.channel_map
         if isinstance(pipeline_ids, str):
-            pipelines = {pipeline_ids: self.channel_map[pipeline_ids]}
+            pipelines = {pipeline_ids: self.get_pipeline(pipeline_ids)}
         elif isinstance(pipeline_ids, list):
-            pipelines = {p: self.channel_map[p] for p in pipeline_ids}
+            pipelines = {p: self.get_pipeline(p) for p in pipeline_ids}
 
         # Create and submit command XML string
         header = f'<cmd>getchlstatus</cmd><list count = "{len(pipelines)}">'
@@ -212,23 +254,24 @@ class NewareAPI:
         for pip in pipelines.values():
             middle += (
                 f'<status ip="{pip["ip"]}" devtype="{pip["devtype"]}" '
-                f'devid="{pip["devid"]}" subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}">true</status>'
+                f'devid="{pip["devid"]}" subdevid="{pip["subdevid"]}" '
+                f'chlid="{pip["Channelid"]}">true</status>'
             )
         footer = "</list>"
         xml_string = self.command(header + middle + footer)
         records = _xml_to_records(xml_string)
 
-        # It seems like in the Neware response the subdevid is ALWAYS 1, this looks like a bug on their end
-        # E.g. if you request the status of 13-5-5 it correctly gets the status of 13-5-5, but tells you it is returning
-        # the status of 13-1-5.
-        # Workaround: instead of returning the result directly, we merge it with the input pipelines, prioritising the
-        # (correct) channel information from the channel map.
+        # Sometimes the response subdevid is incorrectly 1
+        # E.g. if you request the status of 13-5-5 it correctly gets the status of 13-5-5, but tells
+        # you it is returning the status of 13-1-5.
+        # Workaround: instead of returning the result directly, we merge it with the input
+        # pipelines, prioritising the (correct) channel information from the channel map.
         return {
             pipeline_id: {**record, **pipeline_dict}
             for (pipeline_id, pipeline_dict), record in zip(pipelines.items(), records, strict=True)
         }
 
-    def inquire_channel(self, pipeline_ids: str | list[str] | None = None) -> dict[str, dict]:
+    def inquire(self, pipeline_ids: str | list[str] | None = None) -> dict[str, dict]:
         """Inquire the status of the channel.
 
         Returns useful information like device id, cycle number, step, workstatus, current, voltage,
@@ -247,9 +290,9 @@ class NewareAPI:
         if not pipeline_ids:  # If no argument passed use all pipelines
             pipelines = self.channel_map
         if isinstance(pipeline_ids, str):
-            pipelines = {pipeline_ids: self.channel_map[pipeline_ids]}
+            pipelines = {pipeline_ids: self.get_pipeline(pipeline_ids)}
         elif isinstance(pipeline_ids, list):
-            pipelines = {p: self.channel_map[p] for p in pipeline_ids}
+            pipelines = {p: self.get_pipeline(p) for p in pipeline_ids}
 
         # Create and submit command XML string
         header = f'<cmd>inquire</cmd><list count = "{len(pipelines)}">'
@@ -270,28 +313,99 @@ class NewareAPI:
             for (pipeline_id, pipeline_dict), record in zip(pipelines.items(), records, strict=True)
         }
 
-    def download_data(self, pipeline: str) -> dict[str, list]:
-        """Download the data points for chlid.
+    def inquiredf(self, pipeline_ids: str | list[str] | None = None) -> dict[str, dict]:
+        """Use the inquiredf command on the channel.
 
-        Uses the channel map to get the device id, subdevice id, and channel id.
+        Returns information about the latest test e.g. test ID and number of datapoints.
+
+        Args:
+            pipeline_ids (optional): pipeline IDs or list of pipeline IDs
+                default: None, will get all pipeline IDs in the channel map
+
+        Returns:
+            a dictionary per channel with the latest info and data point
+                key is the pipeline ID e.g. "13-1-5"
 
         """
+        # Get the (subset) of the channel map
+        if not pipeline_ids:  # If no argument passed use all pipelines
+            pipelines = self.channel_map
+        if isinstance(pipeline_ids, str):
+            pipelines = {pipeline_ids: self.get_pipeline(pipeline_ids)}
+        elif isinstance(pipeline_ids, list):
+            pipelines = {p: self.get_pipeline(p) for p in pipeline_ids}
+
+        # Create and submit command XML string
+        header = f'<cmd>inquiredf</cmd><list count = "{len(pipelines)}">'
+        middle = ""
+        for pip in pipelines.values():
+            middle += (
+                f'<chl devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
+                f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}" testid="0" />'
+            )
+        footer = "</list>"
+        xml_string = self.command(header + middle + footer)
+        records = _xml_to_records(xml_string)
+
+        return {
+            pipeline_id: {**record, **pipeline_dict}
+            for (pipeline_id, pipeline_dict), record in zip(pipelines.items(), records, strict=True)
+        }
+
+    def downloadlog(self, pipeline_id: str) -> list[dict]:
+        """Download the log information for latest test. Only queries one channel at a time.
+
+        Args:
+            pipeline_id: ID of the pipeline in format {devid}-{subdevid}-{chlid} e.g. 220-10-2
+
+        Returns:
+            List of dictionaries containing log information.
+
+        """
+        pip = self.get_pipeline(pipeline_id)
+        command = (
+            "<cmd>downloadlog</cmd>"
+            f'<download devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
+            f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}" testid="0"/>'
+        )
+        result = self.command(command)
+        return _xml_to_records(result)
+
+    def download(self, pipeline_id: str, last_n_points: int = 10000) -> dict[str, list]:
+        """Download the data points for a channel. By default grabs the last 10000 points.
+
+        WARNING: for large amounts of data (>100k) this can take seconds.
+        Download and parse the .nda/.ndax file if speed matters.
+
+        Args:
+            pipeline_id: ID of the pipeline in format {devid}-{subdevid}-{chlid} e.g. 220-10-2
+            last_n_points: how many datapoints to download, set to 0 to get all data
+
+        Returns:
+            Dictionary of lists of data from latest test
+
+        """
+        res = self.inquiredf(pipeline_id)
+        n_total = res[pipeline_id]["count"]
+        start = min(n_total, n_total - last_n_points if last_n_points else 0)
+        n_remaining = n_total - start
         chunk_size = 1000
         data: list[dict] = []
-        pip = self.channel_map[pipeline]
-        while len(data) % chunk_size == 0:
+        pip = self.get_pipeline(pipeline_id)
+        while n_remaining > 0:
             cmd_string = (
                 "<cmd>download</cmd>"
                 f'<download devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
                 f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}" '
-                f'auxid="0" testid="0" startpos="{len(data) + 1}" count="{chunk_size}"/>'
+                f'auxid="0" testid="0" startpos="{start + len(data) + 1}" count="{chunk_size}"/>'
             )
             xml_string = self.command(cmd_string)
             data += _xml_to_records(xml_string)
+            n_remaining -= chunk_size
         # Orient as dict of lists
         return _lod_to_dol(data)
 
-    def device_info(self) -> list[dict]:
+    def getdevinfo(self) -> dict[str, dict]:
         """Get device information.
 
         Returns:
@@ -300,9 +414,97 @@ class NewareAPI:
         """
         command = "<cmd>getdevinfo</cmd>"
         xml_string = self.command(command)
-        return _xml_to_records(xml_string, "middle")
+        devices = _xml_to_records(xml_string, "middle")
+        if not devices:
+            msg = "No devices found. Check that devices are working in BTS Client."
+            raise ValueError(msg)
+        return {f"{d['devid']}-{d['subdevid']}-{d['Channelid']}": d for d in devices}
 
-    def update_channel_map(self) -> None:
-        """Update the channel map with the latest device information."""
-        devices = self.device_info()
-        self.channel_map = {f"{d['devid']}-{d['subdevid']}-{d['Channelid']}": d for d in devices}
+    def light(self, pipeline_ids: str | list[str], light_on: bool = True) -> list[dict]:
+        """Set light on channel.
+
+        Args:
+            pipeline_ids: pipeline IDs to light
+            light_on (default: True): whether to turn light on or off
+
+        Returns:
+            a dictionary per channel, key 'light' has value 'ok' if function worked
+
+        """
+        if isinstance(pipeline_ids, str):
+            pipelines = {pipeline_ids: self.get_pipeline(pipeline_ids)}
+        elif isinstance(pipeline_ids, list):
+            pipelines = {p: self.get_pipeline(p) for p in pipeline_ids}
+        light_str = "true" if light_on else "false"
+        header = f'<cmd>light</cmd><list count = "{len(pipelines)}">'
+        middle = ""
+        for pip in pipelines.values():
+            middle += (
+                f'<light ip="{pip["ip"]}" devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
+                f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}">{light_str}</light>'
+            )
+        footer = "</list>"
+        xml_string = self.command(header + middle + footer)
+        return _xml_to_records(xml_string)
+
+    def clearflag(self, pipeline_ids: str | list[str]) -> list[dict]:
+        """Clear flag on channel e.g. after buzzer alarm.
+
+        Args:
+            pipeline_ids: pipeline IDs to light e.g. "120-3-8"
+
+        Returns:
+            a dictionary per channel, key 'clearflag' has value 'ok' if function worked
+
+        """
+        if isinstance(pipeline_ids, str):
+            pipelines = {pipeline_ids: self.get_pipeline(pipeline_ids)}
+        elif isinstance(pipeline_ids, list):
+            pipelines = {p: self.get_pipeline(p) for p in pipeline_ids}
+        header = f'<cmd>clearflag</cmd><list count = "{len(pipelines)}">'
+        middle = ""
+        for pip in pipelines.values():
+            middle += (
+                f'<clearflag ip="{pip["ip"]}" devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
+                f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}">true</clearflag>'
+            )
+        footer = "</list>"
+        xml_string = self.command(header + middle + footer)
+        return _xml_to_records(xml_string)
+
+    def get_steps(self, pipeline_id: str) -> list[dict]:
+        """Get the step layer of data, such as step index and type, start and end time etc."""
+        pip = self.get_pipeline(pipeline_id)
+        command = (
+            f"<cmd>downloadStepLayer</cmd>"
+            f'<downloadStepLayer devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
+            f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}" />'
+        )
+        xml_string = self.command(command)
+        return _xml_to_records(xml_string)
+
+    def get_testid(self, pipeline_ids: str | list[str] | None) -> dict[dict]:
+        """Get the test ID of pipelines."""
+        if pipeline_ids is None:
+            pipelines = self.channel_map
+        if isinstance(pipeline_ids, str):
+            pipelines = {pipeline_ids: self.get_pipeline(pipeline_ids)}
+        elif isinstance(pipeline_ids, list):
+            pipelines = {p: self.get_pipeline(p) for p in pipeline_ids}
+        # Download 0 data points to find test ID
+        for pip in pipelines.values():
+            command = (
+                "<cmd>download</cmd>"
+                f'<download devtype="{pip["devtype"]}" devid="{pip["devid"]}" '
+                f'subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}" '
+                f'auxid="0" testid="0" startpos="0" count="0"/>'
+            )
+            resp = self.command(command)
+            match = re.search(r'(?<=testid=")\d+(?=")', resp)
+            if match:
+                # Add test number to the channel map info
+                pip["test_id"] = int(match.group())
+                pip["full_test_id"] = f"{pip['devid']}-{pip['subdevid']}-{pip['Channelid']}-{int(match.group())}"
+            else:
+                raise ValueError
+        return pipelines

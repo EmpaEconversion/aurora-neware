@@ -39,19 +39,17 @@ def status(
 
 
 @app.command()
-def inquiredf(
+def get_num_datapoints(
     pipeline_ids: PipelinesArgument = None,
     indent: IndentOption = None,
 ) -> None:
     """Get test information for all or selected pipelines.
 
     Example usage:
-    >>> neware inquiredf
-    {"120-1-1": {"testid": 20, "count": 754268, ... }, "120-1-2": {"testid": 21, "count": 721343, ... }, ... }
-    >>> neware status 220-2-2
-    {"220-2-2": {"devtype": 27, "devid": 220, "subdevid": 2, "chlid": 2, "testid": 123, "count": 416605, ... }}
-    >>> neware status 120-1-5 120-1-6
-    {"120-1-5": {...}, "120-1-6": {...}}
+    >>> neware get-num-datapoints
+    {"120-1-1": 20, "120-1-2": 45, ... }
+    >>> neware get-num-datapoints 220-2-2
+    {"220-2-2": 55}
 
     Args:
         pipeline_ids (optional): list of pipeline IDs in format {devid}-{subdevid}-{chlid} e.g. 220-10-1 220-10-2
@@ -60,7 +58,8 @@ def inquiredf(
 
     """
     with NewareAPI() as nw:
-        typer.echo(json.dumps(nw.inquiredf(pipeline_ids), indent=indent))
+        output = {key: value["count"] for key, value in nw.inquiredf(pipeline_ids).items()}
+    typer.echo(json.dumps(output, indent=indent))
 
 
 @app.command()

@@ -1,7 +1,7 @@
 """CLI for the Neware battery cycling API."""
 
 import json
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
 
@@ -9,15 +9,18 @@ from neware_api import NewareAPI
 
 app = typer.Typer()
 
+IndentOption = Annotated[int | None, typer.Option(help="Indent the output.")]
+
 
 @app.command()
 def status(
-    pipeline_ids: Annotated[Optional[list[str]], typer.Argument()] = None,  # noqa: UP007
+    pipeline_ids: Annotated[list[str] | None, typer.Argument()] = None,
+    indent: IndentOption = None,
 ) -> None:
     """Get the status of the cycling process for all or selected pipelines.
 
     Example usage:
-    >>> neware status
+    >>> neware statuss
     {"13-1-1": {"ip":127.0.0.1, "devtype": 27 ... }, "13-1-2": { ... }, ... }
     >>> neware status 13-1-5
     {"13-1-5":{...}}
@@ -27,15 +30,17 @@ def status(
     Args:
         pipeline_ids (optional): list of pipeline IDs to get status from
             will use the full channel map if not provided
+        indent (optional): an integer number that controls the identation of the printed output
 
     """
     with NewareAPI() as nw:
-        typer.echo(json.dumps(nw.inquire(pipeline_ids)))
+        typer.echo(json.dumps(nw.inquire(pipeline_ids), indent=indent))
 
 
 @app.command()
 def inquiredf(
-    pipeline_ids: Annotated[Optional[list[str]], typer.Argument()] = None,  # noqa: UP007
+    pipeline_ids: Annotated[list[str] | None, typer.Argument()] = None,
+    indent: IndentOption = None,
 ) -> None:
     """Get test information for all or selected pipelines.
 
@@ -49,15 +54,16 @@ def inquiredf(
 
     Args:
         pipeline_ids (optional): list of pipeline IDs in format {devid}-{subdevid}-{chlid} e.g. 220-10-1 220-10-2
-            will use the full channel map if not provided
+            will use the full channel map if not provided`
+        indent (optional): an integer number that controls the identation of the printed output
 
     """
     with NewareAPI() as nw:
-        typer.echo(json.dumps(nw.inquiredf(pipeline_ids)))
+        typer.echo(json.dumps(nw.inquiredf(pipeline_ids), indent=indent))
 
 
 @app.command()
-def download(pipeline_id: str, n_points: int) -> None:
+def download(pipeline_id: str, n_points: int, indent: IndentOption = None) -> None:
     """Download data (voltage, current, time, etc.) from specified channel.
 
     Example usage:
@@ -67,14 +73,15 @@ def download(pipeline_id: str, n_points: int) -> None:
     Args:
         pipeline_id: pipeline ID in format {devid}-{subdevid}-{chlid} e.g. 220-10-1
         n_points: last n points to download, set to 0 to download all data (can be slow)
+        indent (optional): an integer number that controls the identation of the printed output
 
     """
     with NewareAPI() as nw:
-        typer.echo(json.dumps(nw.download(pipeline_id, n_points)))
+        typer.echo(json.dumps(nw.download(pipeline_id, n_points), indent=indent))
 
 
 @app.command()
-def downloadlog(pipeline_id: str) -> None:
+def downloadlog(pipeline_id: str, indent: IndentOption = None) -> None:
     """Download log information from specified channel.
 
     Example usage:
@@ -83,10 +90,11 @@ def downloadlog(pipeline_id: str) -> None:
 
     Args:
         pipeline_id: pipeline ID in format {devid}-{subdevid}-{chlid} e.g. 220-10-1
+        indent (optional): an integer number that controls the identation of the printed output
 
     """
     with NewareAPI() as nw:
-        typer.echo(json.dumps(nw.downloadlog(pipeline_id)))
+        typer.echo(json.dumps(nw.downloadlog(pipeline_id), indent=indent))
 
 
 @app.command()
@@ -136,7 +144,7 @@ def stop(pipeline_id: str) -> None:
 
 
 @app.command()
-def clearflag(pipeline_ids: Annotated[list[str], typer.Argument()]) -> None:
+def clearflag(pipeline_ids: Annotated[list[str], typer.Argument()], indent: IndentOption = None) -> None:
     """Clear flag on selected channel(s).
 
     Example usage:
@@ -145,14 +153,15 @@ def clearflag(pipeline_ids: Annotated[list[str], typer.Argument()]) -> None:
 
     Args:
         pipeline_ids: list of pipeline IDs in format {devid}-{subdevid}-{chlii} e.g. 220-10-1 220-10-2
+        indent (optional): an integer number that controls the identation of the printed output
 
     """
     with NewareAPI() as nw:
-        typer.echo(json.dumps(nw.clearflag(pipeline_ids)))
+        typer.echo(json.dumps(nw.clearflag(pipeline_ids), indent=indent))
 
 
 @app.command()
-def testid(pipeline_ids: Annotated[list[str] | None, typer.Argument()] = None) -> None:
+def testid(pipeline_ids: Annotated[list[str] | None, typer.Argument()] = None, indent: IndentOption = None) -> None:
     """Get the latest test ID from selected pipeline.
 
     Example usage:
@@ -163,7 +172,8 @@ def testid(pipeline_ids: Annotated[list[str] | None, typer.Argument()] = None) -
     Args:
         pipeline_ids (optional): list of pipeline IDs in format {devid}-{subdevid}-{chlid} e.g. 220-10-1 220-10-2
             will use the full channel map if not provided (warning: this function is slow compared to status)
+        indent (optional): an integer number that controls the identation of the printed output
 
     """
     with NewareAPI() as nw:
-        typer.echo(json.dumps(nw.get_testid(pipeline_ids)))
+        typer.echo(json.dumps(nw.get_testid(pipeline_ids), indent=indent))

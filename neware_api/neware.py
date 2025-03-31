@@ -15,7 +15,7 @@ from defusedxml import ElementTree
 # DONE
 # connect, getdevinfo, getchlstatus, start, stop, download, downloadlog, inquire, inquiredf,
 # clearflag, light, downloadStepLayer
-# TODO:
+# REMAINING
 # broadcaststop, continue, chl_ctrl, goto, parallel, getparallel, resetalarm, reset
 
 

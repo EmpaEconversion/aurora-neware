@@ -184,8 +184,6 @@ class NewareAPI:
             xml_filepaths = [Path(f) for f in xml_files]
         if isinstance(xml_files, str | Path):
             xml_filepaths = [Path(xml_files)]
-        if not isinstance(xml_files, list):
-            raise TypeError
         if not all(f.exists() for f in xml_filepaths):
             raise FileNotFoundError
 

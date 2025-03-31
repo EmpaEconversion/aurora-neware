@@ -481,7 +481,7 @@ class NewareAPI:
         xml_string = self.command(command)
         return _xml_to_records(xml_string)
 
-    def get_testid(self, pipeline_ids: str | list[str] | None) -> dict[dict]:
+    def get_testid(self, pipeline_ids: str | list[str] | None) -> dict[str, dict]:
         """Get the test ID of pipelines."""
         if pipeline_ids is None:
             pipelines = self.channel_map

@@ -11,6 +11,7 @@ app = typer.Typer()
 
 IndentOption = Annotated[int | None, typer.Option(help="Indent the output.")]
 PipelinesArgument = Annotated[list[str] | None, typer.Argument()]
+NumberOfPoints = Annotated[int, typer.Argument()]
 
 
 @app.command()
@@ -59,12 +60,13 @@ def get_num_datapoints(
     """
     with NewareAPI() as nw:
         output = {key: value["count"] for key, value in nw.inquiredf(pipeline_ids).items()}
-    typer.echo(json.dumps(output, indent=indent))
+        typer.echo(json.dumps(nw.inquiredf(pipeline_ids), indent=indent))
+    # typer.echo(json.dumps(output, indent=indent))
 
 
 @app.command()
-def download(pipeline_id: str, n_points: int, indent: IndentOption = None) -> None:
-    """Download data (voltage, current, time, etc.) from specified channel.
+def get_data(pipeline_id: str, n_points: NumberOfPoints = 0, indent: IndentOption = None) -> None:
+    """Get data points (voltage, current, time, etc.) from specified channel.
 
     Example usage:
     >>> neware download 220-10-1 10

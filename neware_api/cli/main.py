@@ -1,6 +1,7 @@
 """CLI for the Neware battery cycling API."""
 
 import json
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -12,6 +13,7 @@ app = typer.Typer()
 IndentOption = Annotated[int | None, typer.Option(help="Indent the output.")]
 PipelinesArgument = Annotated[list[str] | None, typer.Argument()]
 NumberOfPoints = Annotated[int, typer.Argument()]
+PathArgument = Annotated[Path, typer.Argument(help="Path to a file")]
 
 
 @app.command()
@@ -82,11 +84,11 @@ def get_data(pipeline_id: str, n_points: NumberOfPoints = 0, indent: IndentOptio
 
 
 @app.command()
-def downloadlog(pipeline_id: str, indent: IndentOption = None) -> None:
+def log(pipeline_id: str, indent: IndentOption = None) -> None:
     """Download log information from specified channel.
 
     Example usage:
-    >>> neware downloadlog 220-10-1
+    >>> neware log 220-10-1
     [{"seqid": 1, "log_code": 100000, "atime": "2024-12-12 15:31:01"}, ... ]
 
     Args:
@@ -99,7 +101,9 @@ def downloadlog(pipeline_id: str, indent: IndentOption = None) -> None:
 
 
 @app.command()
-def start(pipeline_id: str, sample_id: str, xml_file: str, save_location: str | None = "C:\\Neware data\\") -> None:
+def start(
+    pipeline_id: str, sample_name: str, xml_file: PathArgument, save_location: PathArgument = "C:\\Neware data\\"
+) -> None:
     """Start job on selected channel.
 
     Example usage:
@@ -112,19 +116,20 @@ def start(pipeline_id: str, sample_id: str, xml_file: str, save_location: str | 
 
     Args:
         pipeline_id: pipeline ID in format {devid}-{subdevid}-{chlid} e.g. 220-10-1
-        sample_id: to use as a barcode in the experiment
-        xml_file: path to a valid XML file with job information
+        sample_name: to use as a barcode in the experiment
+        xml_file: path to  a valid XML file with job information
         save_location: where to save the backup files
 
     """
     with NewareAPI() as nw:
         result = nw.start(
             pipeline_id,
-            sample_id,
-            xml_file,
-            save_location=save_location,
+            sample_name,
+            xml_file.resolve(),
+            save_location=save_location.resolve(),
         )
-        typer.echo(json.dumps(result))
+        if result[0]["start"] != "ok":
+            typer.echo(json.dumps(result), err=True)
 
 
 @app.command()
@@ -141,7 +146,8 @@ def stop(pipeline_id: str) -> None:
     """
     with NewareAPI() as nw:
         result = nw.stop(pipeline_id)
-        typer.echo(json.dumps(result))
+        if result[0]["stop"] != "ok":
+            typer.echo(json.dumps(result), err=True)
 
 
 @app.command()
@@ -162,7 +168,7 @@ def clearflag(pipeline_ids: Annotated[list[str], typer.Argument()], indent: Inde
 
 
 @app.command()
-def testid(pipeline_ids: PipelinesArgument = None, indent: IndentOption = None) -> None:
+def get_id(pipeline_ids: PipelinesArgument = None, full_id: bool = False, indent: IndentOption = None) -> None:
     """Get the latest test ID from selected pipeline.
 
     Example usage:
@@ -173,8 +179,13 @@ def testid(pipeline_ids: PipelinesArgument = None, indent: IndentOption = None) 
     Args:
         pipeline_ids (optional): list of pipeline IDs in format {devid}-{subdevid}-{chlid} e.g. 220-10-1 220-10-2
             will use the full channel map if not provided (warning: this function is slow compared to status)
+        full_id (optional): controls whether to print short or full id
         indent (optional): an integer number that controls the identation of the printed output
 
     """
+    id_key = "full_test_id" if full_id else "test_id"
+
     with NewareAPI() as nw:
-        typer.echo(json.dumps(nw.get_testid(pipeline_ids), indent=indent))
+        result = nw.get_testid(pipeline_ids)
+    out = {key: value[id_key] for key, value in result.items()}
+    typer.echo(json.dumps(out, indent=indent))

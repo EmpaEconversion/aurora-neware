@@ -15,8 +15,7 @@ from defusedxml import ElementTree
 # DONE
 # connect, getdevinfo, getchlstatus, start, stop, download, downloadlog, inquire, inquiredf,
 # clearflag, light, downloadStepLayer
-# TODO:
-# broadcaststop, continue, chl_ctrl, goto, parallel, getparallel, resetalarm, reset
+# Fix: broadcaststop, continue, chl_ctrl, goto, parallel, getparallel, resetalarm, reset
 
 
 def _auto_convert_type(value: str) -> int | float | str | None:
@@ -80,10 +79,10 @@ def _xml_to_lists(
 
 def _lod_to_dol(ld: list[dict]) -> dict[str, list]:
     """Convert list of dictionaries to dictionary of lists."""
-    # try:
-    return {k: [d[k] for d in ld] for k in ld[0]}
-    # except IndexError:
-    #     return {}
+    try:
+        return {k: [d[k] for d in ld] for k in ld[0]}
+    except IndexError:
+        return {}
 
 
 class NewareAPI:
@@ -346,7 +345,6 @@ class NewareAPI:
             )
         footer = "</list>"
         xml_string = self.command(header + middle + footer)
-        print("result_of_command:", xml_string)
         records = _xml_to_records(xml_string)
 
         return {
@@ -388,7 +386,6 @@ class NewareAPI:
 
         """
         res = self.inquiredf(pipeline_id)
-        print("n_total", res)
 
         n_total = res[pipeline_id]["count"]
         start = min(n_total, n_total - last_n_points if last_n_points else 0)
@@ -407,7 +404,6 @@ class NewareAPI:
             data += _xml_to_records(xml_string)
             n_remaining -= chunk_size
         # Orient as dict of lists
-        print("Debug:", data)
         return _lod_to_dol(data)
 
     def getdevinfo(self) -> dict[str, dict]:

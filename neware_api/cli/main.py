@@ -22,7 +22,7 @@ def status(
     """Get the status of the cycling process for all or selected pipelines.
 
     Example usage:
-    >>> neware statuss
+    >>> neware status
     {"13-1-1": {"ip":127.0.0.1, "devtype": 27 ... }, "13-1-2": { ... }, ... }
     >>> neware status 13-1-5
     {"13-1-5":{...}}
@@ -54,14 +54,13 @@ def get_num_datapoints(
 
     Args:
         pipeline_ids (optional): list of pipeline IDs in format {devid}-{subdevid}-{chlid} e.g. 220-10-1 220-10-2
-            will use the full channel map if not provided`
+            will use the full channel map if not provided
         indent (optional): an integer number that controls the identation of the printed output
 
     """
     with NewareAPI() as nw:
         output = {key: value["count"] for key, value in nw.inquiredf(pipeline_ids).items()}
-        typer.echo(json.dumps(nw.inquiredf(pipeline_ids), indent=indent))
-    # typer.echo(json.dumps(output, indent=indent))
+    typer.echo(json.dumps(output, indent=indent))
 
 
 @app.command()

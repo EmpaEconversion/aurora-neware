@@ -15,7 +15,7 @@ from defusedxml import ElementTree
 # DONE
 # connect, getdevinfo, getchlstatus, start, stop, download, downloadlog, inquire, inquiredf,
 # clearflag, light, downloadStepLayer
-# TODO:
+# REMAINING
 # broadcaststop, continue, chl_ctrl, goto, parallel, getparallel, resetalarm, reset
 
 
@@ -184,8 +184,6 @@ class NewareAPI:
             xml_filepaths = [Path(f) for f in xml_files]
         if isinstance(xml_files, str | Path):
             xml_filepaths = [Path(xml_files)]
-        if not isinstance(xml_files, list):
-            raise TypeError
         if not all(f.exists() for f in xml_filepaths):
             raise FileNotFoundError
 
@@ -483,7 +481,7 @@ class NewareAPI:
         xml_string = self.command(command)
         return _xml_to_records(xml_string)
 
-    def get_testid(self, pipeline_ids: str | list[str] | None) -> dict[dict]:
+    def get_testid(self, pipeline_ids: str | list[str] | None) -> dict[str, dict]:
         """Get the test ID of pipelines."""
         if pipeline_ids is None:
             pipelines = self.channel_map

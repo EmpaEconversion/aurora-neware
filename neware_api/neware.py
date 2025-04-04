@@ -15,8 +15,8 @@ from defusedxml import ElementTree
 # DONE
 # connect, getdevinfo, getchlstatus, start, stop, download, downloadlog, inquire, inquiredf,
 # clearflag, light, downloadStepLayer
-# Fix: broadcaststop, continue, chl_ctrl, goto, parallel, getparallel, resetalarm, reset
-
+# REMAINING:
+# broadcaststop, continue, chl_ctrl, goto, parallel, getparallel, resetalarm, reset
 
 def _auto_convert_type(value: str) -> int | float | str | None:
     """Try to automatically convert a string to float or int."""
@@ -484,7 +484,7 @@ class NewareAPI:
         xml_string = self.command(command)
         return _xml_to_records(xml_string)
 
-    def get_testid(self, pipeline_ids: str | list[str] | None) -> dict[dict]:
+    def get_testid(self, pipeline_ids: str | list[str] | None) -> dict[str, dict]:
         """Get the test ID of pipelines."""
         if pipeline_ids is None:
             pipelines = self.channel_map

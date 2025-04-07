@@ -168,14 +168,14 @@ def clearflag(pipeline_ids: Annotated[list[str], typer.Argument()], indent: Inde
 
 
 @app.command()
-def get_id(pipeline_ids: PipelinesArgument = None, full_id: bool = False, indent: IndentOption = None) -> None:
+def get_job_id(pipeline_ids: PipelinesArgument = None, full_id: bool = False, indent: IndentOption = None) -> None:
     """Get the latest test ID from selected pipeline.
 
     Example usage:
-    >>> neware get-id 101-1-1 101-1-2
+    >>> neware get-job-id 101-1-1 101-1-2
     {"101-1-1": 21, "101-1-2": 22}
 
-    >>> neware get-id --full-id 101-1-1 101-1-2
+    >>> neware get-job-id --full-id 101-1-1 101-1-2
     {"101-1-1": "101-1-1-21", "101-1-2": "101-1-2-22"}
 
     Args:

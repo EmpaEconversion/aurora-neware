@@ -15,8 +15,9 @@ from defusedxml import ElementTree
 # DONE
 # connect, getdevinfo, getchlstatus, start, stop, download, downloadlog, inquire, inquiredf,
 # clearflag, light, downloadStepLayer
-# REMAINING:
+# REMAINING
 # broadcaststop, continue, chl_ctrl, goto, parallel, getparallel, resetalarm, reset
+
 
 def _auto_convert_type(value: str) -> int | float | str | None:
     """Try to automatically convert a string to float or int."""

@@ -102,29 +102,29 @@ def log(pipeline_id: str, indent: IndentOption = None) -> None:
 
 @app.command()
 def start(
-    pipeline_id: str, sample_name: str, xml_file: PathArgument, save_location: PathArgument = "C:\\Neware data\\"
+    pipeline_id: str, sample_id: str, xml_file: PathArgument, save_location: PathArgument = "C:\\Neware data\\"
 ) -> None:
     """Start job on selected channel.
 
     Example usage:
-    >>> neware start 220-10-1 "my_sample_name" "C:/path/to/job.xml"
+    >>> neware start 220-10-1 "my_sample_id" "C:/path/to/job.xml"
     [{"ip": "127.0.0.1", "devtype": 27, "devid": 220, "subdevid": 10, "chlid": 0, "start": "ok"}]
-    >>> neware start 220-5-3 "my_sample_name" "C:/path/to/invalid.xml"
+    >>> neware start 220-5-3 "my_sample_id" "C:/path/to/invalid.xml"
     [{"ip": "127.0.0.1", "devtype": 27, "devid": 220, "subdevid": 10, "chlid": 0, "start": "false"}]
 
     In the second case, download and check the Neware logs for more information.
 
     Args:
         pipeline_id: pipeline ID in format {devid}-{subdevid}-{chlid} e.g. 220-10-1
-        sample_name: to use as a barcode in the experiment
-        xml_file: path to  a valid XML file with job information
+        sample_id: to use as a barcode in the experiment
+        xml_file: path to a valid XML file with job information
         save_location: where to save the backup files
 
     """
     with NewareAPI() as nw:
         result = nw.start(
             pipeline_id,
-            sample_name,
+            sample_id,
             xml_file.resolve(),
             save_location=save_location.resolve(),
         )

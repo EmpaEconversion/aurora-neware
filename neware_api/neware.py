@@ -80,7 +80,10 @@ def _xml_to_lists(
 
 def _lod_to_dol(ld: list[dict]) -> dict[str, list]:
     """Convert list of dictionaries to dictionary of lists."""
-    return {k: [d[k] for d in ld] for k in ld[0]}
+    try:
+        return {k: [d[k] for d in ld] for k in ld[0]}
+    except IndexError:
+        return {}
 
 
 class NewareAPI:
@@ -384,6 +387,7 @@ class NewareAPI:
 
         """
         res = self.inquiredf(pipeline_id)
+
         n_total = res[pipeline_id]["count"]
         start = min(n_total, n_total - last_n_points if last_n_points else 0)
         n_remaining = n_total - start

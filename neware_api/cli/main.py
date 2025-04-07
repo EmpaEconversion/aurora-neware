@@ -172,9 +172,11 @@ def get_id(pipeline_ids: PipelinesArgument = None, full_id: bool = False, indent
     """Get the latest test ID from selected pipeline.
 
     Example usage:
-    >>> neware testid 220-1-1
-    {"220-1-1": {"ip": "127.0.0.1", "devtype": 27, "devid": 220, "subdevid": 1, "Channelid": 1,
-    "channel": "true", "test_id": 66, "full_test_id": "220-1-1-66"}}
+    >>> neware get-id 101-1-1 101-1-2
+    {"101-1-1": 21, "101-1-2": 22}
+
+    >>> neware get-id --full-id 101-1-1 101-1-2
+    {"101-1-1": "101-1-1-21", "101-1-2": "101-1-2-22"}
 
     Args:
         pipeline_ids (optional): list of pipeline IDs in format {devid}-{subdevid}-{chlid} e.g. 220-10-1 220-10-2

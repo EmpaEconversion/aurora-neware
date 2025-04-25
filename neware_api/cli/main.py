@@ -16,16 +16,16 @@ NumberOfPoints = typing.Annotated[int, typer.Argument()]
 PathArgument = typing.Annotated[Path, typer.Argument(help="Path to a file")]
 
 
-valid_status = ["working", "stop", "finish", "protect", "pause"]
+VALID_STATUSES = ["working", "stop", "finish", "protect", "pause"]
 
 
 def validate_status(status: list[str] | None) -> list[str]:
     """Validate the list of provided statuses."""
     if not status:
         return []
-    invalid = [s for s in status if s not in valid_status]
+    invalid = [s for s in status if s not in VALID_STATUSES]
     if invalid:
-        error_message = f"Invalid status: {', '.join(invalid)}. Valid options are: {', '.join(valid_status)}"
+        error_message = f"Invalid status: {', '.join(invalid)}. Valid options are: {', '.join(VALID_STATUSES)}"
         raise typer.BadParameter(error_message)
     return status
 

@@ -16,26 +16,26 @@ NumberOfPoints = typing.Annotated[int, typer.Argument()]
 PathArgument = typing.Annotated[Path, typer.Argument(help="Path to a file")]
 
 
-VALID_STATUSES = ["working", "stop", "finish", "protect", "pause"]
+VALID_STATES = ["working", "stop", "finish", "protect", "pause"]
 
 
-def validate_status(status: list[str] | None) -> list[str]:
+def validate_state(state: list[str] | None) -> list[str]:
     """Validate the list of provided statuses."""
-    if not status:
+    if not state:
         return []
-    invalid = [s for s in status if s not in VALID_STATUSES]
+    invalid = [s for s in state if s not in VALID_STATES]
     if invalid:
-        error_message = f"Invalid status: {', '.join(invalid)}. Valid options are: {', '.join(VALID_STATUSES)}"
+        error_message = f"Invalid state: {', '.join(invalid)}. Valid options are: {', '.join(VALID_STATES)}"
         raise typer.BadParameter(error_message)
-    return status
+    return state
 
 
 @app.command()
 def status(
     pipeline_ids: PipelinesArgument = None,
-    channel_status: typing.Annotated[
+    state: typing.Annotated[
         list[str] | None,
-        typer.Option(..., "--status", "-s", help="Allowed channel status(es)", callback=validate_status),
+        typer.Option(..., "--state", "-s", help="Allowed channel state(s)", callback=validate_state),
     ] = None,
     indent: IndentOption = None,
 ) -> None:
@@ -52,14 +52,14 @@ def status(
     Args:
         pipeline_ids (optional): list of pipeline IDs to get status from
             will use the full channel map if not provided
-        channel_status (optional): list of allowed channel statuses
+        state (optional): list of allowed channel statuses
         indent (optional): an integer number that controls the identation of the printed output
 
     """
     with NewareAPI() as nw:
         channels = nw.inquire(pipeline_ids)
-        if channel_status:
-            channels = {key: value for key, value in channels.items() if value["workstatus"] in channel_status}
+        if state:
+            channels = {key: value for key, value in channels.items() if value["workstatus"] in state}
         typer.echo(json.dumps(channels, indent=indent))
 
 

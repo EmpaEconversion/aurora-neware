@@ -215,7 +215,7 @@ class NewareAPI:
         footer = (
             f'<backup backupdir="{save_location}" remotedir="" filenametype="0" '
             'customfilename="" addtimewhenrepeat="0" createdirbydate="0" '
-            'filetype="0" backupontime="0" backupontimeinterval="720" '
+            'filetype="0" backupontime="1" backupontimeinterval="720" '
             'backupfree="1" /></list>"'
         )
         cmd = header + middle + footer

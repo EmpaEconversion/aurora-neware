@@ -1,8 +1,8 @@
 """CLI for the Neware battery cycling API."""
 
 import json
-import typing
 from pathlib import Path
+from typing import Annotated
 
 import typer
 
@@ -10,10 +10,10 @@ from neware_api import NewareAPI
 
 app = typer.Typer()
 
-IndentOption = typing.Annotated[int | None, typer.Option(help="Indent the output.")]
-PipelinesArgument = typing.Annotated[list[str] | None, typer.Argument()]
-NumberOfPoints = typing.Annotated[int, typer.Argument()]
-PathArgument = typing.Annotated[Path, typer.Argument(help="Path to a file")]
+IndentOption = Annotated[int | None, typer.Option(help="Indent the output.")]
+PipelinesArgument = Annotated[list[str] | None, typer.Argument()]
+NumberOfPoints = Annotated[int, typer.Argument()]
+PathArgument = Annotated[Path, typer.Argument(help="Path to a file")]
 
 
 VALID_STATES = ["working", "stop", "finish", "protect", "pause"]
@@ -33,7 +33,7 @@ def validate_state(state: list[str] | None) -> list[str]:
 @app.command()
 def status(
     pipeline_ids: PipelinesArgument = None,
-    state: typing.Annotated[
+    state: Annotated[
         list[str] | None,
         typer.Option(..., "--state", "-s", help="Allowed channel state(s)", callback=validate_state),
     ] = None,
@@ -173,7 +173,7 @@ def stop(pipeline_id: str) -> None:
 
 
 @app.command()
-def clearflag(pipeline_ids: typing.Annotated[list[str], typer.Argument()], indent: IndentOption = None) -> None:
+def clearflag(pipeline_ids: Annotated[list[str], typer.Argument()], indent: IndentOption = None) -> None:
     """Clear flag on selected channel(s).
 
     Example usage:

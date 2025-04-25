@@ -1,8 +1,8 @@
 """CLI for the Neware battery cycling API."""
 
 import json
+import typing
 from pathlib import Path
-from typing import Annotated
 
 import typer
 
@@ -10,15 +10,33 @@ from neware_api import NewareAPI
 
 app = typer.Typer()
 
-IndentOption = Annotated[int | None, typer.Option(help="Indent the output.")]
-PipelinesArgument = Annotated[list[str] | None, typer.Argument()]
-NumberOfPoints = Annotated[int, typer.Argument()]
-PathArgument = Annotated[Path, typer.Argument(help="Path to a file")]
+IndentOption = typing.Annotated[int | None, typer.Option(help="Indent the output.")]
+PipelinesArgument = typing.Annotated[list[str] | None, typer.Argument()]
+NumberOfPoints = typing.Annotated[int, typer.Argument()]
+PathArgument = typing.Annotated[Path, typer.Argument(help="Path to a file")]
+
+
+valid_status = ["working", "stop", "finish", "protect", "pause"]
+
+
+def validate_status(status: list[str] | None) -> list[str]:
+    """Validate the list of provided statuses."""
+    if not status:
+        return []
+    invalid = [s for s in status if s not in valid_status]
+    if invalid:
+        error_message = f"Invalid status: {', '.join(invalid)}. Valid options are: {', '.join(valid_status)}"
+        raise typer.BadParameter(error_message)
+    return status
 
 
 @app.command()
 def status(
     pipeline_ids: PipelinesArgument = None,
+    channel_status: typing.Annotated[
+        list[str] | None,
+        typer.Option(..., "--status", "-s", help="Allowed channel status(es)", callback=validate_status),
+    ] = None,
     indent: IndentOption = None,
 ) -> None:
     """Get the status of the cycling process for all or selected pipelines.
@@ -34,11 +52,15 @@ def status(
     Args:
         pipeline_ids (optional): list of pipeline IDs to get status from
             will use the full channel map if not provided
+        channel_status (optional): list of allowed channel statuses
         indent (optional): an integer number that controls the identation of the printed output
 
     """
     with NewareAPI() as nw:
-        typer.echo(json.dumps(nw.inquire(pipeline_ids), indent=indent))
+        channels = nw.inquire(pipeline_ids)
+        if channel_status:
+            channels = {key: value for key, value in channels.items() if value["workstatus"] in channel_status}
+        typer.echo(json.dumps(channels, indent=indent))
 
 
 @app.command()
@@ -151,7 +173,7 @@ def stop(pipeline_id: str) -> None:
 
 
 @app.command()
-def clearflag(pipeline_ids: Annotated[list[str], typer.Argument()], indent: IndentOption = None) -> None:
+def clearflag(pipeline_ids: typing.Annotated[list[str], typer.Argument()], indent: IndentOption = None) -> None:
     """Clear flag on selected channel(s).
 
     Example usage:

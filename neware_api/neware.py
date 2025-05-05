@@ -190,6 +190,20 @@ class NewareAPI:
         if not all(f.exists() for f in xml_filepaths):
             raise FileNotFoundError
 
+        allowed_states = ["finish", "stop", "protect"]
+        status = self.inquire(pipeline_ids)
+        blocked_pipelines = {
+            k: v.get("workstatus") for k, v in status.items() if v.get("workstatus") not in allowed_states
+        }
+        if blocked_pipelines:
+            msg = (
+                 "Can only start jobs if pipeline state is "
+                 f"{', '.join(repr(state) for state in allowed_states)}. "
+                "The following pipelines are in blocked states: "
+                f"{blocked_pipelines}"
+            )
+            raise ValueError(msg)
+
         # Create and submit command XML string
         header = f'<cmd>start</cmd><list count = "{len(pipelines)}">'
         middle = ""
@@ -202,7 +216,7 @@ class NewareAPI:
         footer = (
             f'<backup backupdir="{save_location}" remotedir="" filenametype="0" '
             'customfilename="" addtimewhenrepeat="0" createdirbydate="0" '
-            'filetype="0" backupontime="0" backupontimeinterval="720" '
+            'filetype="0" backupontime="1" backupontimeinterval="720" '
             'backupfree="1" /></list>"'
         )
         cmd = header + middle + footer

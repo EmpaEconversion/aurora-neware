@@ -30,6 +30,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "bumpver==2024.1130",
     "pre-commit~=4.0",
     "pytest~=8.0",
 ]
@@ -58,3 +59,20 @@ fix = true
 
 [tool.mypy]
 disable_error_code = ["import-untyped"]
+
+[tool.bumpver]
+current_version = "v0.0.0"
+version_pattern = "vMAJOR.MINOR.PATCH[PYTAGNUM]"
+commit_message = "Bump version {old_version} -> {new_version}."
+tag_message = "Release {new_version}."
+tag_scope = "default"
+pre_commit_hook = ""
+post_commit_hook = ""
+commit = true
+tag = true
+push = true
+
+[tool.bumpver.file_patterns]
+"neware_api/version.py" = [
+    '__version__ = "{pep440_version}"',
+]

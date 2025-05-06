@@ -1,23 +1,56 @@
 # neware-api
 
 ## Overview
-`neware-api` is a Python package being developed to interact with the Neware battery testing system.
-
-The package provides a command line interface to query and control cylers.
+`neware-api` provides a Python API and command line interface (CLI) to control Neware cylers.
 
 It is designed for BTS 8.0 and WHW-200L-160CH-B systems, and should work on other cyclers using BTS 8.0.
 
 ## Features
-- Command line interface
+- CLI and Python API
 - Connect to Neware cyclers
-- Retrieve status of channels
+- Retrieve status, data, logs
 - Start and stop experiments
 
 ## Installation
-Install on a Windows PC with BTS server and client 8.0, connected to a Neware cycler with the API activated.
-Then in a Python >3.12 environment, run:
+Install on a Windows PC with BTS server and client 8.0, connected to one or more Neware cyclers with the API activated.
+
+In a Python >3.12 environment, run:
 ```
 pip install git+https://github.com/EmpaEconversion/neware-api.git
+```
+
+## CLI usage
+
+See commands and arguments with
+```
+neware --help
+neware <COMMAND> --help
+```
+
+E.g. to check the status of all channels use
+```
+neware status
+```
+
+To start a job use
+```
+neware start "pipeline_id" "my_sample" "my_protocol.xml"
+```
+
+A `pipeline` is defined by `{Device ID}-{Sub-device ID}-{Channel ID}`, e.g. `"100-2-3"` for machine 100, sub-device 2, channel 3.
+
+## API usage
+
+Commands are also available through Python, e.g.
+```python
+python from neware_api import NewareAPI
+
+with NewareAPI() as nw:  # connect to the instrument
+    nw.start(
+        "pipeline_id",
+        "my_sample",
+        "my_protocol.xml",
+    )
 ```
 
 ## License

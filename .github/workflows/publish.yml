@@ -10,7 +10,7 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    if: github.repository == 'EmpaEconversion/neware-api'
+    if: github.repository == 'EmpaEconversion/aurora-neware'
 
 
     steps:

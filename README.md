@@ -1,7 +1,7 @@
-# neware-api
+# aurora-neware
 
 ## Overview
-`neware-api` provides a Python API and command line interface (CLI) to control Neware cylers.
+`aurora-neware` provides a standalone Python API and command line interface (CLI) to control Neware cylers.
 
 It is designed for BTS 8.0 and WHW-200L-160CH-B systems, and should work on other cyclers using BTS 8.0.
 
@@ -16,7 +16,7 @@ Install on a Windows PC with BTS server and client 8.0, connected to one or more
 
 In a Python >3.12 environment, run:
 ```
-pip install git+https://github.com/EmpaEconversion/neware-api.git
+pip install git+https://github.com/EmpaEconversion/aurora-neware.git
 ```
 
 ## CLI usage
@@ -43,7 +43,7 @@ A `pipeline` is defined by `{Device ID}-{Sub-device ID}-{Channel ID}`, e.g. `"10
 
 Commands are also available through Python, e.g.
 ```python
-python from neware_api import NewareAPI
+from aurora_neware import NewareAPI
 
 with NewareAPI() as nw:  # connect to the instrument
     nw.start(
@@ -81,4 +81,11 @@ For any questions or issues, please open an issue on GitHub or contact econversi
 
 ## Acknowledgements
 
-This software was developed at the Materials for Energy Conversion Lab at the Swiss Federal Laboratories for Materials Science and Technology (Empa), and supported through the EU's Horizon programme under the IntelLiGent project (101069765) and the Swiss State Secretariat for Education, Research and Innovation (SERI) (22.00142). 🇪🇺🇨🇭
+This software was developed at the Laboratory of Materials for Energy Conversion at Empa, the Swiss Federal Laboratories for Materials Science and Technology, and supported by funding from the [IntelLiGent](https://heuintelligent.eu/) project and [Battery 2030+](https://battery2030.eu/) initiative from the European Union’s research and innovation program under grant agreement No. 101069765 and No. 101104022 and from the Swiss State Secretariat for Education, Research, and Innovation (SERI) under contract No. 22.001422 and 300313.
+
+<img src="https://github.com/user-attachments/assets/373d30b2-a7a4-4158-a3d8-f76e3a45a508#gh-light-mode-only" height="100" alt="IntelLiGent logo">
+<img src="https://github.com/user-attachments/assets/9d003d4f-af2f-497a-8560-d228cc93177c#gh-dark-mode-only" height="100" alt="IntelLiGent logo">&nbsp;&nbsp;&nbsp;&nbsp;
+<img src="https://github.com/user-attachments/assets/21ebfe94-5524-487c-a24b-592f68193efc#gh-light-mode-only" height="100" alt="Battery 2030+ logo">
+<img src="https://github.com/user-attachments/assets/5bcd9d36-1851-4439-9c71-4dbe09c21df0#gh-dark-mode-only" height="100" alt="Battery 2030+ logo">&nbsp;&nbsp;&nbsp;&nbsp;
+<img src="https://github.com/user-attachments/assets/1d32a635-703b-432c-9d42-02e07d94e9a9" height="100" alt="EU flag">&nbsp;&nbsp;&nbsp;&nbsp;
+<img src="https://github.com/user-attachments/assets/cd410b39-5989-47e5-b502-594d9a8f5ae1" height="100" alt="Swiss secretariat">

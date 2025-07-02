@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/50f5f13a-e16c-44de-9049-1276bd1b6e5e6#gh-light-mode-only" width="500" align="center" alt="aurora-neware logo">
+  <img src="https://github.com/user-attachments/assets/1046d7d9-0ef8-4188-a5cc-2c840e60c028#gh-light-mode-only" width="500" align="center" alt="aurora-neware logo">
   <img src="https://github.com/user-attachments/assets/738ed394-d2d7-4115-92c7-9a66537beb63#gh-dark-mode-only" width="500" align="center" alt="aurora-neware logo">
 </p>
 

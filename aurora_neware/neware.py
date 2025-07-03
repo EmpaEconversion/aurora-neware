@@ -197,8 +197,8 @@ class NewareAPI:
         }
         if blocked_pipelines:
             msg = (
-                 "Can only start jobs if pipeline state is "
-                 f"{', '.join(repr(state) for state in allowed_states)}. "
+                "Can only start jobs if pipeline state is "
+                f"{', '.join(repr(state) for state in allowed_states)}. "
                 "The following pipelines are in blocked states: "
                 f"{blocked_pipelines}"
             )

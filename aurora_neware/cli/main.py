@@ -6,7 +6,7 @@ from typing import Annotated
 
 import typer
 
-from neware_api import NewareAPI
+from aurora_neware import NewareAPI
 
 app = typer.Typer()
 

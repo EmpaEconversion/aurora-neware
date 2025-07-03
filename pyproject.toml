@@ -3,7 +3,7 @@ requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name = "neware_api"
+name = "aurora_neware"
 dynamic = ["version"]
 readme = "README.md"
 description = "Python API for Neware Battery Testing System"
@@ -36,7 +36,7 @@ dev = [
 ]
 
 [project.scripts]
-neware = "neware_api.cli.main:app"
+neware = "aurora_neware.cli.main:app"
 
 [tool.ruff]
 line-length = 120  # Set the maximum line length
@@ -73,6 +73,6 @@ tag = true
 push = true
 
 [tool.bumpver.file_patterns]
-"neware_api/version.py" = [
+"aurora_neware/version.py" = [
     '__version__ = "{pep440_version}"',
 ]

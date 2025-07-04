@@ -9,23 +9,15 @@ readme = "README.md"
 description = "Python API for Neware Battery Testing System"
 license = {file = "LICENSE"}
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "defusedxml==0.7.1",
-    "numpy==2.1.1",
-    "pandas==2.2.3",
-    "python-dateutil==2.9.0.post0",
-    "pytz==2024.2",
-    "shortuuid==1.0.13",
-    "six==1.16.0",
-    "typer~=0.15",
-    "tzdata==2024.2",
-    "xmltodict==0.13.0",
+    "defusedxml",
+    "typer",
 ]
 
 [project.optional-dependencies]

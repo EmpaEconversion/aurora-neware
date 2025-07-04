@@ -1,6 +1,6 @@
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/1046d7d9-0ef8-4188-a5cc-2c840e60c028#gh-light-mode-only" width="500" align="center" alt="aurora-neware logo">
-  <img src="https://github.com/user-attachments/assets/738ed394-d2d7-4115-92c7-9a66537beb63#gh-dark-mode-only" width="500" align="center" alt="aurora-neware logo">
+  <img src="https://github.com/user-attachments/assets/49e6cb62-4cf9-49e0-b2dd-8bc6aa943b89#gh-light-mode-only" width="500" align="center" alt="aurora-neware logo">
+  <img src="https://github.com/user-attachments/assets/29fb6253-aa98-4b03-bf36-89104f03d3c5#gh-dark-mode-only" width="500" align="center" alt="aurora-neware logo">
 </p>
 
 </br>

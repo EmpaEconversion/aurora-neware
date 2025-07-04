@@ -21,7 +21,7 @@ Install on a Windows PC with BTS server and client 8.0, connected to one or more
 
 In a Python >3.12 environment, run:
 ```
-pip install git+https://github.com/EmpaEconversion/aurora-neware.git
+pip install aurora-neware
 ```
 
 ## CLI usage

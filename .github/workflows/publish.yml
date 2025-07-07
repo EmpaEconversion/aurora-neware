@@ -29,6 +29,9 @@ jobs:
 
       - name: Build and publish to PyPI
         run: flit publish
+        env:
+          FLIT_USERNAME: __token__
+          FLIT_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2

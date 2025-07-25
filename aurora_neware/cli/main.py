@@ -173,7 +173,13 @@ def start(
             typer.echo(pipeline_id)
 
         if result[0]["start"] != "ok":
-            typer.echo(json.dumps(result), err=True)
+            typer.secho(
+                "Error: could not start job, xml may be invalid, check Neware logs",
+                err=True,
+                fg=typer.colors.RED,
+            )
+            typer.secho("Output: " + json.dumps(result), err=True, fg=typer.colors.RED)
+            raise typer.Exit(code=1)
 
 
 @app.command()
@@ -191,7 +197,9 @@ def stop(pipeline_id: str) -> None:
     with NewareAPI() as nw:
         result = nw.stop(pipeline_id)
         if result[0]["stop"] != "ok":
-            typer.echo(json.dumps(result), err=True)
+            typer.secho("Error: could not stop job", err=True, fg=typer.colors.RED)
+            typer.secho("Output: " + json.dumps(result), err=True, fg=typer.colors.RED)
+            raise typer.Exit(code=1)
 
 
 @app.command()

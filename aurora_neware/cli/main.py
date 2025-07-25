@@ -1,5 +1,6 @@
 """CLI for the Neware battery cycling API."""
 
+import enum
 import json
 from pathlib import Path
 from typing import Annotated
@@ -15,6 +16,18 @@ PipelinesArgument = Annotated[list[str] | None, typer.Argument()]
 NumberOfPoints = Annotated[int, typer.Argument()]
 PathArgument = Annotated[Path, typer.Argument(help="Path to a file")]
 
+
+class Verbosity(enum.IntEnum):
+    """Verbosity levels."""
+
+    ERROR = 0
+    WARNING = 1
+    INFO = 2
+    DEBUG = 3
+
+
+# Define the shared verbosity option
+VerbosityOption = typer.Option(0, "--verbose", "-v", count=True, help="Increase output verbosity (-v, -vv, -vvv)")
 
 VALID_STATES = ["working", "stop", "finish", "protect", "pause"]
 
@@ -124,7 +137,11 @@ def log(pipeline_id: str, indent: IndentOption = None) -> None:
 
 @app.command()
 def start(
-    pipeline_id: str, sample_id: str, xml_file: PathArgument, save_location: PathArgument = "C:\\Neware data\\"
+    pipeline_id: str,
+    sample_id: str,
+    xml_file: PathArgument,
+    save_location: PathArgument = "C:\\Neware data\\",
+    verbosity: int = VerbosityOption,
 ) -> None:
     """Start job on selected channel.
 
@@ -141,6 +158,7 @@ def start(
         sample_id: to use as a barcode in the experiment
         xml_file: path to a valid XML file with job information
         save_location: where to save the backup files
+        verbosity: the level of verbosity 0 - Error, 1 - Warning, 2 - Info, 3 - Debug.
 
     """
     with NewareAPI() as nw:
@@ -150,8 +168,18 @@ def start(
             xml_file.resolve(),
             save_location=save_location.resolve(),
         )
+
+        if Verbosity(verbosity) >= Verbosity.INFO:
+            typer.echo(pipeline_id)
+
         if result[0]["start"] != "ok":
-            typer.echo(json.dumps(result), err=True)
+            typer.secho(
+                "Error: could not start job, xml may be invalid, check Neware logs",
+                err=True,
+                fg=typer.colors.RED,
+            )
+            typer.secho("Output: " + json.dumps(result), err=True, fg=typer.colors.RED)
+            raise typer.Exit(code=1)
 
 
 @app.command()
@@ -169,7 +197,9 @@ def stop(pipeline_id: str) -> None:
     with NewareAPI() as nw:
         result = nw.stop(pipeline_id)
         if result[0]["stop"] != "ok":
-            typer.echo(json.dumps(result), err=True)
+            typer.secho("Error: could not stop job", err=True, fg=typer.colors.RED)
+            typer.secho("Output: " + json.dumps(result), err=True, fg=typer.colors.RED)
+            raise typer.Exit(code=1)
 
 
 @app.command()

@@ -315,7 +315,7 @@ class NewareAPI:
         for pip in pipelines.values():
             middle += (
                 f'<inquire ip="{pip["ip"]}" devtype="{pip["devtype"]}" '
-                f'devid="{pip["devid"]}" subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}"\n'
+                f'devid="{pip["devid"]}" subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}" '
                 'aux="0" barcode="1">true</inquire>'
             )
         footer = "</list>"

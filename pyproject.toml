@@ -12,19 +12,25 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Operating System :: OS Independent",
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "defusedxml",
-    "typer",
+    "defusedxml>=0.7.1",
+    "typer>=0.21.1",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "bumpver==2024.1130",
-    "pre-commit~=4.0",
-    "pytest~=8.0",
+    "bumpver>=2025.1131",
+    "pre-commit>=4.5.1",
+    "pytest>=8.4.1",
+    "ruff>=0.12.3",
 ]
 
 [project.scripts]

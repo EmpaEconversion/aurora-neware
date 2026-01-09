@@ -49,6 +49,13 @@ lint.ignore = [
 ]
 fix = true
 
+[tool.ruff.lint.extend-per-file-ignores]
+"tests/*.py" = [
+    "S101", # asserts allowed in tests
+    "PT011", # allow just checking for ValueError without match
+    "SLF001", # allow private member access
+]
+
 [tool.mypy]
 disable_error_code = ["import-untyped"]
 

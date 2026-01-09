@@ -1,12 +1,17 @@
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/49e6cb62-4cf9-49e0-b2dd-8bc6aa943b89#gh-light-mode-only" width="500" align="center" alt="aurora-neware logo">
-  <img src="https://github.com/user-attachments/assets/29fb6253-aa98-4b03-bf36-89104f03d3c5#gh-dark-mode-only" width="500" align="center" alt="aurora-neware logo">
-</p>
+<h1 align="center">
+  <img src="https://github.com/user-attachments/assets/de390844-f425-4fe0-8b97-a32d94ee7414" width="500" align="center" alt="aurora-biologic logo">
+</h1>
 
 </br>
 
-## Overview
-`aurora-neware` provides a standalone Python API and command line interface (CLI) to control Neware cylers.
+[![PyPI version](https://img.shields.io/pypi/v/aurora-neware.svg)](https://pypi.org/project/aurora-neware/)
+[![License](https://img.shields.io/github/license/empaeconversion/aurora-neware?color=blue)](https://github.com/empaeconversion/aurora-neware/blob/main/LICENSE)
+[![Python Versions](https://img.shields.io/pypi/pyversions/aurora-neware.svg)](https://pypi.org/project/aurora-neware/)
+[![Checks](https://img.shields.io/github/actions/workflow/status/empaeconversion/aurora-neware/CI.yml)](https://github.com/EmpaEconversion/aurora-neware/actions/workflows/CI.yml)
+[![Coverage](https://img.shields.io/codecov/c/github/empaeconversion/aurora-neware)](https://app.codecov.io/gh/EmpaEconversion/aurora-neware)
+
+
+A standalone Python API and command line interface (CLI) to control Neware battery cyclers.
 
 It is designed for BTS 8.0 and WHW-200L-160CH-B systems, and should work on other cyclers using BTS 8.0.
 
@@ -23,6 +28,11 @@ In a Python >3.12 environment, run:
 ```
 pip install aurora-neware
 ```
+
+> [!IMPORTANT]
+> Your BTS software must have the API activated, accessed with Help -> Mode settings.
+>
+> You may need to contact Neware for an activation key.
 
 ## CLI usage
 
@@ -58,26 +68,6 @@ with NewareAPI() as nw:  # connect to the instrument
     )
 ```
 
-## For maintainers
-
-To create a new release, clone the repository, install development dependencies with `pip install '.[dev]'`, and then execute `bumpver update --major/--minor/--patch`.
-This will:
-
-  1. Create a tagged release with bumped version and push it to the repository.
-  2. Trigger a GitHub actions workflow that creates a GitHub release.
-
-Additional notes:
-
-  - Use the `--dry` option to preview the release change.
-  - The release tag (e.g. a/b/rc) is determined from the last release.
-    Use the `--tag` option to override the release tag.
-
-
-## License
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more information.
-
-## Contact
-For any questions or issues, please open an issue on GitHub or contact econversion@empa.ch.
 
 ## Contributors
 

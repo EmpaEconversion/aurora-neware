@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from aurora_neware import NewareAPI
+from aurora_neware.neware import _lod_to_dol
 
 
 def test_init(mock_bts) -> None:
@@ -309,6 +310,8 @@ def test_light(mock_bts) -> None:
     with NewareAPI() as nw:
         res = nw.light("21-1-1")
         assert res == [{"ip": "127.0.0.1", "devtype": 27, "devid": 21, "subdevid": 1, "chlid": 1, "light": "ok"}]
+        res = nw.light(["21-1-1"])
+        assert res == [{"ip": "127.0.0.1", "devtype": 27, "devid": 21, "subdevid": 1, "chlid": 1, "light": "ok"}]
 
 
 def test_clearflag(mock_bts) -> None:
@@ -316,3 +319,31 @@ def test_clearflag(mock_bts) -> None:
     with NewareAPI() as nw:
         res = nw.clearflag("21-1-1")
         assert res == [{"ip": "127.0.0.1", "devtype": 27, "devid": 21, "subdevid": 1, "chlid": 1, "clearflag": "false"}]
+
+
+def test_lod_to_dol() -> None:
+    """Test list of dictionaries to dictionary of lists."""
+    lod = [
+        {"seqid": 1, "log_code": 100000, "atime": "2025-12-03 16:44:02"},
+        {"seqid": 139025, "log_code": 100215, "atime": "2025-12-19 16:36:19"},
+        {"seqid": 139026, "log_code": 100213, "atime": "2025-12-19 16:36:20"},
+        {"seqid": 139026, "log_code": 100007, "atime": "2025-12-19 16:36:20"},
+        {"seqid": 219585, "log_code": 100001, "atime": "2025-12-28 22:30:11"},
+    ]
+    dol = {
+        "seqid": [1, 139025, 139026, 139026, 219585],
+        "log_code": [100000, 100215, 100213, 100007, 100001],
+        "atime": [
+            "2025-12-03 16:44:02",
+            "2025-12-19 16:36:19",
+            "2025-12-19 16:36:20",
+            "2025-12-19 16:36:20",
+            "2025-12-28 22:30:11",
+        ],
+    }
+    assert _lod_to_dol(lod) == dol
+
+    assert _lod_to_dol([]) == {}
+
+    with pytest.raises(KeyError):
+        _lod_to_dol([{"a": 1, "b": 2}, {"b": 2}])

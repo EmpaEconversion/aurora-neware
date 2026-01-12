@@ -480,14 +480,17 @@ class NewareAPI:
         xml_string = self.command(command)
         return _xml_to_records(xml_string)
 
-    def get_testid(self, pipeline_ids: str | list[str] | None) -> dict[str, dict]:
+    def get_testid(self, pipeline_ids: str | list[str] | None = None) -> dict[str, dict]:
         """Get the test ID of pipelines."""
         if pipeline_ids is None:
             pipelines = self.channel_map
-        if isinstance(pipeline_ids, str):
+        elif isinstance(pipeline_ids, str):
             pipelines = {pipeline_ids: self.get_pipeline(pipeline_ids)}
         elif isinstance(pipeline_ids, list):
             pipelines = {p: self.get_pipeline(p) for p in pipeline_ids}
+        else:
+            msg = "Pipeline_ids must be None, a string, or list of strings."
+            raise ValueError(msg)
         # Download 0 data points to find test ID
         for pip in pipelines.values():
             command = (
@@ -498,10 +501,8 @@ class NewareAPI:
             )
             resp = self.command(command)
             match = re.search(r'(?<=testid=")\d+(?=")', resp)
-            if match:
-                # Add test number to the channel map info
-                pip["test_id"] = int(match.group())
-                pip["full_test_id"] = f"{pip['devid']}-{pip['subdevid']}-{pip['Channelid']}-{int(match.group())}"
-            else:
-                raise ValueError
+            assert match, "Could not find a 'testid' in response."  # noqa: S101
+            # Add test number to the channel map info
+            pip["test_id"] = int(match.group())
+            pip["full_test_id"] = f"{pip['devid']}-{pip['subdevid']}-{pip['Channelid']}-{int(match.group())}"
         return pipelines

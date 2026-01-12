@@ -282,10 +282,19 @@ def test_get_test_id(mock_bts) -> None:
                 "full_test_id": "21-1-1-143",
             }
         }
+
         res = nw.get_testid("21-1-1")
         assert res == expect
+
         res = nw.get_testid(["21-1-1"])
         assert res == expect
+
+        with pytest.raises(ValueError):
+            nw.get_testid(123)
+
+        res = nw.get_testid()
+        assert len(res) == 16
+        assert res["21-1-1"]["full_test_id"] == "21-1-1-143"
 
 
 def test_get_steps(mock_bts) -> None:

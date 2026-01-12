@@ -59,25 +59,6 @@ def _xml_to_records(
     return [{k: _auto_convert_type(v) for k, v in el.items()} for el in result]
 
 
-def _xml_to_lists(
-    xml_string: str,
-    list_name: str = "list",
-) -> dict[str, list]:
-    """Extract elements inside <list> tags, convert to a dictionary of lists.
-
-    Args:
-        xml_string: raw xml string
-        list_name: the tag that contains the list of elements to parse
-
-    Returns:
-        dict where keys are the names of records, each has a list of values
-            like 'orient = list' in JSON
-
-    """
-    result = _xml_to_records(xml_string, list_name)
-    return _lod_to_dol(result)
-
-
 def _lod_to_dol(ld: list[dict]) -> dict[str, list]:
     """Convert list of dictionaries to dictionary of lists."""
     try:

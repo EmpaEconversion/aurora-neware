@@ -4,15 +4,12 @@ Contains a single class NewareAPI that provides methods to interact with the
 Neware Battery Testing System.
 """
 
-import os
 import re
 import socket
 from pathlib import Path
 from types import TracebackType
 
 from defusedxml import ElementTree
-
-from aurora_neware.mocks import FakeSocket
 
 # Possible commands from Neware's API
 # DONE
@@ -101,7 +98,7 @@ class NewareAPI:
         """Initialize the NewareAPI object with the IP, port, and channel map."""
         self.ip = ip
         self.port = port
-        self.neware_socket = socket.socket() if not os.getenv("AURORA_NEWARE_MOCK_SOCKET") else FakeSocket()
+        self.neware_socket = socket.socket()
         self.channel_map: dict[str, dict] = {}
         self.start_message = '<?xml version="1.0" encoding="UTF-8" ?><bts version="1.0">'
         self.end_message = "</bts>"

@@ -1,14 +1,17 @@
 """Fixtures for tests."""
 
-import os
-from collections.abc import Generator
+import socket
 
 import pytest
 
+from .mocks import FakeSocket
 
-@pytest.fixture(scope="module")
-def mock_bts() -> Generator:
-    """Set environment variable to mock the socket."""
-    os.environ["AURORA_NEWARE_MOCK_SOCKET"] = "1"
-    yield
-    del os.environ["AURORA_NEWARE_MOCK_SOCKET"]
+
+@pytest.fixture
+def mock_bts(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Replace socket.socket() with FakeSocket."""
+
+    def fake_socket() -> FakeSocket:
+        return FakeSocket()
+
+    monkeypatch.setattr(socket, "socket", fake_socket)

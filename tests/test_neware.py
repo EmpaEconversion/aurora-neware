@@ -16,6 +16,13 @@ def test_init(mock_bts) -> None:
         assert len(nw.channel_map) == 16
 
 
+def test_init_no_devices(mock_bts, no_devices) -> None:
+    """Test API object initialisation."""
+    with pytest.raises(ValueError) as excinfo:
+        NewareAPI().connect()
+    assert "No devices found." in str(excinfo.value)
+
+
 def test_get_status(mock_bts) -> None:
     """Test getchlstatus function."""
     with NewareAPI() as nw:

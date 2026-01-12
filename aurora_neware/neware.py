@@ -59,25 +59,6 @@ def _xml_to_records(
     return [{k: _auto_convert_type(v) for k, v in el.items()} for el in result]
 
 
-def _xml_to_lists(
-    xml_string: str,
-    list_name: str = "list",
-) -> dict[str, list]:
-    """Extract elements inside <list> tags, convert to a dictionary of lists.
-
-    Args:
-        xml_string: raw xml string
-        list_name: the tag that contains the list of elements to parse
-
-    Returns:
-        dict where keys are the names of records, each has a list of values
-            like 'orient = list' in JSON
-
-    """
-    result = _xml_to_records(xml_string, list_name)
-    return _lod_to_dol(result)
-
-
 def _lod_to_dol(ld: list[dict]) -> dict[str, list]:
     """Convert list of dictionaries to dictionary of lists."""
     try:
@@ -315,7 +296,7 @@ class NewareAPI:
         for pip in pipelines.values():
             middle += (
                 f'<inquire ip="{pip["ip"]}" devtype="{pip["devtype"]}" '
-                f'devid="{pip["devid"]}" subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}"\n'
+                f'devid="{pip["devid"]}" subdevid="{pip["subdevid"]}" chlid="{pip["Channelid"]}" '
                 'aux="0" barcode="1">true</inquire>'
             )
         footer = "</list>"
@@ -499,14 +480,17 @@ class NewareAPI:
         xml_string = self.command(command)
         return _xml_to_records(xml_string)
 
-    def get_testid(self, pipeline_ids: str | list[str] | None) -> dict[str, dict]:
+    def get_testid(self, pipeline_ids: str | list[str] | None = None) -> dict[str, dict]:
         """Get the test ID of pipelines."""
         if pipeline_ids is None:
             pipelines = self.channel_map
-        if isinstance(pipeline_ids, str):
+        elif isinstance(pipeline_ids, str):
             pipelines = {pipeline_ids: self.get_pipeline(pipeline_ids)}
         elif isinstance(pipeline_ids, list):
             pipelines = {p: self.get_pipeline(p) for p in pipeline_ids}
+        else:
+            msg = "Pipeline_ids must be None, a string, or list of strings."
+            raise ValueError(msg)
         # Download 0 data points to find test ID
         for pip in pipelines.values():
             command = (
@@ -517,10 +501,8 @@ class NewareAPI:
             )
             resp = self.command(command)
             match = re.search(r'(?<=testid=")\d+(?=")', resp)
-            if match:
-                # Add test number to the channel map info
-                pip["test_id"] = int(match.group())
-                pip["full_test_id"] = f"{pip['devid']}-{pip['subdevid']}-{pip['Channelid']}-{int(match.group())}"
-            else:
-                raise ValueError
+            assert match, "Could not find a 'testid' in response."  # noqa: S101
+            # Add test number to the channel map info
+            pip["test_id"] = int(match.group())
+            pip["full_test_id"] = f"{pip['devid']}-{pip['subdevid']}-{pip['Channelid']}-{int(match.group())}"
         return pipelines

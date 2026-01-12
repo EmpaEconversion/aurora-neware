@@ -7,14 +7,17 @@ class FakeSocket:
     Responses were captured from a real BTS8.0 machine.
     """
 
-    def __init__(self):
-        self.sent_data = []
+    def __init__(self) -> None:
+        """Initialise the 'socket'."""
+        self.sent_data: list[str] = []
         self._recv_buffer = b""
 
-    def connect(self, address: tuple[str, int]):
+    def connect(self, address: tuple[str, int]) -> None:
+        """Fake connect to an IP and port."""
         self.address = address
 
-    def sendall(self, data: bytes):
+    def sendall(self, data: bytes) -> None:
+        """Fake send a command and prepare a response."""
         text = data.decode("utf-8")
         self.sent_data.append(text)
 
@@ -150,6 +153,19 @@ class FakeSocket:
                 b"  </list>\r\n"
                 b"</bts>"
             )
+        elif (
+            '<cmd>inquire</cmd><list count = "1"><inquire ip="127.0.0.1" devtype="27" devid="21" subdevid="1" chlid="4"'
+            in text
+        ):
+            response = (
+                b'<?xml version="1.0" encoding="UTF-8"?>\r\n'
+                b'<bts version="1.0">\r\n'
+                b"  <cmd>inquire_resp</cmd>\r\n"
+                b'  <list count="1">\r\n'
+                b'    <inquire dev="27-21-1-4-0" cycle_id="1" step_type="--" workstatus="finish" barcode="251203_kigr_gen17_04" current="0" voltage="0.5741" capacity="0" energy="0" totaltime="0" relativetime="0" open_or_close="0" log_code="0" />\r\n'
+                b"  </list>\r\n"
+                b"</bts>"
+            )
         elif '<cmd>inquiredf</cmd><list count = "16">' in text:
             response = (
                 b'<?xml version="1.0" encoding="UTF-8"?>\r\n'
@@ -185,7 +201,10 @@ class FakeSocket:
                 b"  </list>\r\n"
                 b"</bts>"
             )
-        elif '<cmd>start</cmd><list count = "1">' in text:
+        elif (
+            '<cmd>start</cmd><list count = "1"><start ip="127.0.0.1" devtype="27" devid="21" subdevid="1" chlid="1"'
+            in text
+        ):
             response = (
                 b'<?xml version="1.0" encoding="UTF-8"?>\r\n'
                 b'<bts version="1.0">\r\n'
@@ -195,7 +214,23 @@ class FakeSocket:
                 b"  </list>\r\n"
                 b"</bts>"
             )
-        elif '<cmd>stop</cmd><list count = "1">' in text:
+        elif (
+            '<cmd>start</cmd><list count = "1"><start ip="127.0.0.1" devtype="27" devid="21" subdevid="1" chlid="4"'
+            in text
+        ):
+            response = (
+                b'<?xml version="1.0" encoding="UTF-8"?>\r\n'
+                b'<bts version="1.0">\r\n'
+                b"  <cmd>start_resp</cmd>\r\n"
+                b'  <list count="1">\r\n'
+                b'    <start ip="127.0.0.1" devtype="27" devid="21" subdevid="1" chlid="2">false</start>\r\n'
+                b"  </list>\r\n"
+                b"</bts>"
+            )
+        elif (
+            '<cmd>stop</cmd><list count = "1"><stop ip="127.0.0.1" devtype="27" devid="21" subdevid="1" chlid="1">true</stop></list>'
+            in text
+        ):
             response = (
                 b'<?xml version="1.0" encoding="UTF-8"?>\r\n'
                 b'<bts version="1.0">\r\n'
@@ -213,6 +248,19 @@ class FakeSocket:
                 b'  <list count="1">\r\n'
                 b'    <stop ip="127.0.0.1" devtype="27" devid="21" subdevid="1" chlid="1">ok</stop>\r\n'
                 b'    <stop ip="127.0.0.1" devtype="27" devid="21" subdevid="1" chlid="2">ok</stop>\r\n'
+                b"  </list>\r\n"
+                b"</bts>"
+            )
+        elif (
+            '<cmd>stop</cmd><list count = "1"><stop ip="127.0.0.1" devtype="27" devid="21" subdevid="1" chlid="4">true</stop></list>'
+            in text
+        ):
+            response = (
+                b'<?xml version="1.0" encoding="UTF-8"?>\r\n'
+                b'<bts version="1.0">\r\n'
+                b"  <cmd>stop_resp</cmd>\r\n"
+                b'  <list count="1">\r\n'
+                b'    <stop ip="127.0.0.1" devtype="27" devid="21" subdevid="1" chlid="4">false</stop>\r\n'
                 b"  </list>\r\n"
                 b"</bts>"
             )
@@ -312,6 +360,7 @@ class FakeSocket:
         self._recv_buffer += response + b"\n\n#\r\n"
 
     def recv(self, bufsize: int) -> bytes:
+        """Receive the response."""
         if not self._recv_buffer:
             return b""
         chunk = self._recv_buffer[:bufsize]
@@ -319,4 +368,5 @@ class FakeSocket:
         return chunk
 
     def close(self) -> None:
+        """Close the fake connection."""
         return

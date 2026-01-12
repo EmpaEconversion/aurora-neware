@@ -114,12 +114,25 @@ def test_start(mock_bts, tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert result.stdout.strip() == "21-1-1"
 
+    result = runner.invoke(app, ["start", "21-1-2", "my_sample", str(xml_file)])
+    assert result.exit_code == 1
+    assert isinstance(result.exception, ValueError)
+    assert "Can only start jobs if pipeline state is" in str(result.exception)
+
+    result = runner.invoke(app, ["start", "21-1-4", "my_sample", str(xml_file)])
+    assert result.exit_code == 1
+    assert "could not start job, xml may be invalid, check Neware logs" in result.stderr
+
 
 def test_stop(mock_bts) -> None:
     """Test stop CLI command."""
     result = runner.invoke(app, ["stop", "21-1-1"])
     assert result.exit_code == 0
     assert result.stdout == ""
+
+    result = runner.invoke(app, ["stop", "21-1-4"])
+    assert result.exit_code == 1
+    assert "could not stop job" in result.stderr
 
 
 def test_clearflag(mock_bts) -> None:
@@ -141,3 +154,17 @@ def test_get_job_id(mock_bts) -> None:
     assert result.exit_code == 0
     output = json.loads(result.stdout)
     assert output == {"21-1-1": "21-1-1-143"}
+
+
+def test_log(mock_bts) -> None:
+    """Test the log CLI command."""
+    result = runner.invoke(app, ["log", "21-1-1"])
+    assert result.exit_code == 0
+    output = json.loads(result.stdout)
+    assert output == [
+        {"seqid": 1, "log_code": 100000, "atime": "2025-12-03 16:44:02"},
+        {"seqid": 139025, "log_code": 100215, "atime": "2025-12-19 16:36:19"},
+        {"seqid": 139026, "log_code": 100213, "atime": "2025-12-19 16:36:20"},
+        {"seqid": 139026, "log_code": 100007, "atime": "2025-12-19 16:36:20"},
+        {"seqid": 219585, "log_code": 100001, "atime": "2025-12-28 22:30:11"},
+    ]

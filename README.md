@@ -24,8 +24,8 @@ It is designed for BTS 8.0 and WHW-200L-160CH-B systems, and should work on othe
 ## Installation
 Install on a Windows PC with BTS server and client 8.0, connected to one or more Neware cyclers with the API activated.
 
-In a Python >3.12 environment, run:
-```
+With Python >3.10, run:
+```bash
 pip install aurora-neware
 ```
 
@@ -36,19 +36,19 @@ pip install aurora-neware
 
 ## CLI usage
 
-See commands and arguments with
-```
+See commands and arguments with:
+```bash
 neware --help
 neware <COMMAND> --help
 ```
 
-E.g. to check the status of all channels use
-```
+E.g. to check the status of all channels use:
+```bash
 neware status
 ```
 
-To start a job use
-```
+To start a job use:
+```bash
 neware start "pipeline_id" "my_sample" "my_protocol.xml"
 ```
 
@@ -56,7 +56,7 @@ A `pipeline` is defined by `{Device ID}-{Sub-device ID}-{Channel ID}`, e.g. `"10
 
 ## API usage
 
-Commands are also available through Python, e.g.
+Commands are also available through Python, e.g.:
 ```python
 from aurora_neware import NewareAPI
 

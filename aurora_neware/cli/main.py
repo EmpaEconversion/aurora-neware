@@ -81,7 +81,7 @@ def get_num_datapoints(
     pipeline_ids: PipelinesArgument = None,
     indent: IndentOption = None,
 ) -> None:
-    """Get test information for all or selected pipelines.
+    """Get number of datapoints on all or selected pipelines.
 
     Example usage:
     >>> neware get-num-datapoints
@@ -105,12 +105,12 @@ def get_data(pipeline_id: str, n_points: NumberOfPoints = 0, indent: IndentOptio
     """Get data points (voltage, current, time, etc.) from specified channel.
 
     Example usage:
-    >>> neware download 220-10-1 10
+    >>> neware get-data 220-10-1 10
     {"cycleid": [488, ...], "volt": [4.11252689361572, ... ], "curr": [0.00271010375581682, ...], ...}
 
     Args:
         pipeline_id: pipeline ID in format {devid}-{subdevid}-{chlid} e.g. 220-10-1
-        n_points: last n points to download, set to 0 to download all data (can be slow)
+        n_points: last n points to get, set to 0 to download all data (can be slow)
         indent (optional): an integer number that controls the identation of the printed output
 
     """
@@ -140,7 +140,7 @@ def start(
     pipeline_id: str,
     sample_id: str,
     xml_file: PathArgument,
-    save_location: PathArgument = "C:\\Neware data\\",
+    save_location: PathArgument = Path("C:\\Neware data\\"),
     verbosity: int = VerbosityOption,
 ) -> None:
     """Start job on selected channel.

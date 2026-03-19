@@ -143,7 +143,7 @@ class NewareAPI:
         pipeline_ids: str | list[str],
         sample_ids: str | list[str],
         xml_files: str | Path | list[str] | list[Path],
-        save_location: str = "C:\\Neware data\\",
+        save_location: str | Path = Path("C:\\Neware data\\"),
     ) -> list[dict]:
         """Start designated payload file on a pipeline.
 
@@ -195,7 +195,7 @@ class NewareAPI:
                 f"{payload}</start>"
             )
         footer = (
-            f'<backup backupdir="{save_location}" remotedir="" filenametype="0" '
+            f'<backup backupdir="{Path(save_location).resolve()}" remotedir="" filenametype="0" '
             'customfilename="" addtimewhenrepeat="0" createdirbydate="0" '
             'filetype="0" backupontime="1" backupontimeinterval="720" '
             'backupfree="1" /></list>"'

@@ -7,7 +7,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, Query, Security
+from fastapi import FastAPI, HTTPException, Query, Request, Security
+from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
 
 from aurora_neware import NewareAPI
@@ -55,6 +56,21 @@ app = FastAPI(
 )
 
 
+@app.exception_handler(KeyError)
+def _key_error_handler(_request: Request, exc: KeyError) -> JSONResponse:
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+@app.exception_handler(ValueError)
+def _value_error_handler(_request: Request, exc: ValueError) -> JSONResponse:
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+
+@app.exception_handler(FileNotFoundError)
+def _file_not_found_handler(_request: Request, exc: FileNotFoundError) -> JSONResponse:
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+
 VALID_STATES = ["working", "stop", "finish", "protect", "pause"]
 
 
@@ -71,11 +87,8 @@ def status(
                 status_code=400,
                 detail=f"Invalid state: {', '.join(invalid)}. Valid options are: {', '.join(VALID_STATES)}",
             )
-    try:
-        with NewareAPI() as nw:
-            channels = nw.inquire(pipeline_ids or None)
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
+    with NewareAPI() as nw:
+        channels = nw.inquire(pipeline_ids or None)
     if state:
         channels = {k: v for k, v in channels.items() if v["workstatus"] in state}
     return channels
@@ -86,32 +99,23 @@ def datapoints(
     pipeline_ids: Annotated[list[str] | None, Query()] = None,
 ) -> dict:
     """Get the number of datapoints on all or selected pipelines."""
-    try:
-        with NewareAPI() as nw:
-            result = nw.inquiredf(pipeline_ids or None)
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
+    with NewareAPI() as nw:
+        result = nw.inquiredf(pipeline_ids or None)
     return {k: v["count"] for k, v in result.items()}
 
 
 @app.get("/data/{pipeline_id}")
 def get_data(pipeline_id: str, n_points: int = 0) -> dict:
     """Get data points from a pipeline."""
-    try:
-        with NewareAPI() as nw:
-            return nw.download(pipeline_id, n_points)
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
+    with NewareAPI() as nw:
+        return nw.download(pipeline_id, n_points)
 
 
 @app.get("/log/{pipeline_id}")
 def log(pipeline_id: str) -> list:
     """Get log entries from a pipeline."""
-    try:
-        with NewareAPI() as nw:
-            return nw.downloadlog(pipeline_id)
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
+    with NewareAPI() as nw:
+        return nw.downloadlog(pipeline_id)
 
 
 @app.post("/start/{pipeline_id}")
@@ -122,30 +126,20 @@ def start(
     save_location: str = "C:\\Neware data\\",
 ) -> list:
     """Start a job on a pipeline."""
-    try:
-        with NewareAPI() as nw:
-            return nw.start(
-                pipeline_id,
-                sample_id,
-                Path(xml_file).resolve(),
-                save_location=Path(save_location).resolve(),
-            )
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
+    with NewareAPI() as nw:
+        return nw.start(
+            pipeline_id,
+            sample_id,
+            Path(xml_file).resolve(),
+            save_location=Path(save_location).resolve(),
+        )
 
 
 @app.post("/stop/{pipeline_id}")
 def stop(pipeline_id: str) -> list:
     """Stop a job on a pipeline."""
-    try:
-        with NewareAPI() as nw:
-            return nw.stop(pipeline_id)
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
+    with NewareAPI() as nw:
+        return nw.stop(pipeline_id)
 
 
 @app.post("/clear-flag")
@@ -153,11 +147,8 @@ def clear_flag(
     pipeline_ids: Annotated[list[str], Query()],
 ) -> list:
     """Clear flag on one or more pipelines."""
-    try:
-        with NewareAPI() as nw:
-            return nw.clearflag(pipeline_ids)
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
+    with NewareAPI() as nw:
+        return nw.clearflag(pipeline_ids)
 
 
 @app.get("/job-id")
@@ -167,9 +158,6 @@ def job_id(
 ) -> dict:
     """Get the latest test ID from all or selected pipelines."""
     id_key = "full_test_id" if full_id else "test_id"
-    try:
-        with NewareAPI() as nw:
-            result = nw.get_testid(pipeline_ids or None)
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
+    with NewareAPI() as nw:
+        result = nw.get_testid(pipeline_ids or None)
     return {k: v[id_key] for k, v in result.items()}

@@ -203,7 +203,7 @@ def stop(pipeline_id: str) -> None:
 
 
 @app.command()
-def clearflag(pipeline_ids: Annotated[list[str], typer.Argument()], indent: IndentOption = None) -> None:
+def clear_flag(pipeline_ids: Annotated[list[str], typer.Argument()], indent: IndentOption = None) -> None:
     """Clear flag on selected channel(s).
 
     Example usage:
@@ -217,6 +217,10 @@ def clearflag(pipeline_ids: Annotated[list[str], typer.Argument()], indent: Inde
     """
     with NewareAPI() as nw:
         typer.echo(json.dumps(nw.clearflag(pipeline_ids), indent=indent))
+
+
+# For backwards compatibility
+app.command("clearflag", hidden=True)(clear_flag)
 
 
 @app.command()

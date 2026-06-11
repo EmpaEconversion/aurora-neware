@@ -11,12 +11,12 @@
 [![Coverage](https://img.shields.io/codecov/c/github/empaeconversion/aurora-neware)](https://app.codecov.io/gh/EmpaEconversion/aurora-neware)
 
 
-A standalone Python API and command line interface (CLI) to control Neware battery cyclers.
+A standalone Python package, command line interface (CLI), and REST API to control Neware battery cyclers.
 
 It is designed for BTS 8.0 and WHW-200L-160CH-B systems, and should work on other cyclers using BTS 8.0.
 
 ## Features
-- CLI and Python API
+- Python package, CLI, REST API
 - Connect to Neware cyclers
 - Retrieve status, data, logs
 - Start and stop experiments
@@ -25,7 +25,7 @@ It is designed for BTS 8.0 and WHW-200L-160CH-B systems, and should work on othe
 Install on a Windows PC with BTS server and client 8.0, connected to one or more Neware cyclers with the API activated.
 
 With Python >3.10, run:
-```bash
+```shell
 pip install aurora-neware
 ```
 
@@ -37,24 +37,24 @@ pip install aurora-neware
 ## CLI usage
 
 See commands and arguments with:
-```bash
+```shell
 neware --help
 neware <COMMAND> --help
 ```
 
 E.g. to check the status of all channels use:
-```bash
+```shell
 neware status
 ```
 
 To start a job use:
-```bash
+```shell
 neware start "pipeline_id" "my_sample" "my_protocol.xml"
 ```
 
 A `pipeline` is defined by `{Device ID}-{Sub-device ID}-{Channel ID}`, e.g. `"100-2-3"` for machine 100, sub-device 2, channel 3.
 
-## API usage
+## Python usage
 
 Commands are also available through Python, e.g.:
 ```python
@@ -68,6 +68,33 @@ with NewareAPI() as nw:  # connect to the instrument
     )
 ```
 
+## REST API usage
+
+Install additional dependencies with
+```shell
+pip install aurora-neware[api]
+```
+Then start the server by running
+```shell
+uvicorn aurora_neware.api.main:app --host localhost --port 8000
+```
+You can then see the available endpoints at `http://localhost:8000/docs`.
+
+To make the server reachable from other machines on the network, you can use `--host 0.0.0.0`. We strongly recommend only doing this in a secure network and using an API key, otherwise anyone with access can stop every measurement and set the voltage to max on every channel connected.
+
+Set an API key with the `AURORA_NEWARE_API_KEY` environment variable, and ensure that you see the message "API key authentication enabled" when starting the server.
+
+In PowerShell (only lasts for that session):
+```shell
+$env:AURORA_NEWARE_API_KEY = "myverysecretkey"
+```
+Or set the key permanently in Windows environment variables.
+
+Then users should pass this key in their requests, e.g.
+```shell
+curl.exe -H "X-API-Key: myverysecretkey" http://<server-ip>:8000/status
+```
+Or use the 'authorize' button on `http://localhost:8000/docs`.
 
 ## Contributors
 

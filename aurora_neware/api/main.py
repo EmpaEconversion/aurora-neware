@@ -1,5 +1,6 @@
 """FastAPI REST API for aurora_neware."""
 
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 
@@ -9,7 +10,16 @@ from aurora_neware import NewareAPI
 
 VALID_STATES = ["working", "stop", "finish", "protect", "pause"]
 
-app = FastAPI(title="Neware REST API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):  # noqa: ANN201, ARG001
+    """Check that the status of channels can be read on startup."""
+    with NewareAPI() as nw:
+        nw.inquire()
+    yield
+
+
+app = FastAPI(title="Neware REST API", lifespan=lifespan)
 
 
 @app.get("/status")

@@ -1,14 +1,43 @@
 """FastAPI REST API for aurora_neware."""
 
+import logging
+import os
+import secrets
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Security
+from fastapi.security import APIKeyHeader
 
 from aurora_neware import NewareAPI
 
-VALID_STATES = ["working", "stop", "finish", "protect", "pause"]
+logger = logging.getLogger(__name__)
+
+API_KEY = os.environ.get("AURORA_NEWARE_API_KEY")
+
+if API_KEY:
+    logger.warning("🔑 API key authentication enabled")
+else:
+    logger.warning(
+        "⚠️⚠️⚠️ No API key authentication enabled! ⚠️⚠️⚠️\n"
+        "Anyone with access to this endpoint can stop all your measurements and set every channel to max voltage.\n"
+        "Only use in this mode within a trusted network!\n"
+        "Set an API key with the 'AURORA_NEWARE_API_KEY' environment variable.\n"
+        "E.g.\n"
+        '$env:AURORA_NEWARE_API_KEY = "myverysecretkey"\n'
+        "uvicorn aurora_neware.api.main:app --host=0.0.0.0 --port=8000"
+    )
+
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
+def verify_key(key: str | None = Security(api_key_header)) -> None:
+    """If API key is set, compare against requests."""
+    if API_KEY is None:
+        return  # no key configured = open access
+    if key is None or not secrets.compare_digest(key, API_KEY):
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
 
 @asynccontextmanager
@@ -19,7 +48,14 @@ async def lifespan(app: FastAPI):  # noqa: ANN201, ARG001
     yield
 
 
-app = FastAPI(title="Neware REST API", lifespan=lifespan)
+app = FastAPI(
+    title="Neware REST API",
+    lifespan=lifespan,
+    dependencies=[Security(verify_key)],
+)
+
+
+VALID_STATES = ["working", "stop", "finish", "protect", "pause"]
 
 
 @app.get("/status")

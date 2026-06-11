@@ -49,6 +49,7 @@ api = [
 ]
 dev = [
     { name = "bumpver" },
+    { name = "fastapi" },
     { name = "httpx2" },
     { name = "pre-commit" },
     { name = "pytest" },
@@ -60,6 +61,7 @@ requires-dist = [
     { name = "bumpver", marker = "extra == 'dev'", specifier = ">=2025.1131" },
     { name = "defusedxml", specifier = ">=0.7.1" },
     { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.136.3" },
+    { name = "fastapi", marker = "extra == 'dev'", specifier = ">=0.136.3" },
     { name = "httpx2", marker = "extra == 'dev'", specifier = ">=2.4.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.5.1" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.4.1" },

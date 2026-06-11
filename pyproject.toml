@@ -26,8 +26,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+api = [
+    "fastapi>=0.136.3",
+]
 dev = [
     "bumpver>=2025.1131",
+    "httpx2>=2.4.0",
     "pre-commit>=4.5.1",
     "pytest>=8.4.1",
     "ruff>=0.14.13",

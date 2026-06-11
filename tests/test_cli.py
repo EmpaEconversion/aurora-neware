@@ -135,8 +135,16 @@ def test_stop(mock_bts) -> None:
     assert "could not stop job" in result.stderr
 
 
+def test_clear_flag(mock_bts) -> None:
+    """Test clear-flag CLI command."""
+    result = runner.invoke(app, ["clear-flag", "21-1-1"])
+    assert result.exit_code == 0
+    output = json.loads(result.stdout)
+    assert output == [{"ip": "127.0.0.1", "devtype": 27, "devid": 21, "subdevid": 1, "chlid": 1, "clearflag": "false"}]
+
+
 def test_clearflag(mock_bts) -> None:
-    """Test clearflag CLI command."""
+    """Test legacy clearflag CLI command."""
     result = runner.invoke(app, ["clearflag", "21-1-1"])
     assert result.exit_code == 0
     output = json.loads(result.stdout)

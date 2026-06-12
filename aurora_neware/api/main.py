@@ -10,6 +10,7 @@ from typing import Annotated
 from fastapi import FastAPI, HTTPException, Query, Request, Security
 from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
+from pydantic import BaseModel
 
 from aurora_neware import NewareAPI
 
@@ -98,7 +99,7 @@ def status(
 def datapoints(
     pipeline_ids: Annotated[list[str] | None, Query()] = None,
 ) -> dict:
-    """Get the number of datapoints on all or selected pipelines."""
+    """Get the number of data points on all or selected pipelines."""
     with NewareAPI() as nw:
         result = nw.inquiredf(pipeline_ids or None)
     return {k: v["count"] for k, v in result.items()}
@@ -106,7 +107,7 @@ def datapoints(
 
 @app.get("/data/{pipeline_id}")
 def get_data(pipeline_id: str, n_points: int = 0) -> dict:
-    """Get data points from a pipeline."""
+    """Get data from a pipeline."""
     with NewareAPI() as nw:
         return nw.download(pipeline_id, n_points)
 
@@ -118,20 +119,23 @@ def log(pipeline_id: str) -> list:
         return nw.downloadlog(pipeline_id)
 
 
+class StartRequest(BaseModel):
+    """Request body for start."""
+
+    sample_id: str
+    xml_file: Path
+    save_location: Path = Path("C:/Neware data/")
+
+
 @app.post("/start/{pipeline_id}")
-def start(
-    pipeline_id: str,
-    sample_id: str,
-    xml_file: str,
-    save_location: str = "C:\\Neware data\\",
-) -> list:
+def start(pipeline_id: str, body: StartRequest) -> list:
     """Start a job on a pipeline."""
     with NewareAPI() as nw:
         return nw.start(
             pipeline_id,
-            sample_id,
-            Path(xml_file).resolve(),
-            save_location=Path(save_location).resolve(),
+            body.sample_id,
+            body.xml_file.resolve(),
+            save_location=body.save_location.resolve(),
         )
 
 

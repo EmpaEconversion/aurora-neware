@@ -103,7 +103,7 @@ def test_log_unknown_pipeline(mock_bts) -> None:
 
 def test_start_missing_file(mock_bts, tmp_path: Path) -> None:
     """POST /start returns 400 when xml_file does not exist."""
-    r = client.post("/start/21-1-1", params={"sample_id": "s1", "xml_file": str(tmp_path / "missing.xml")})
+    r = client.post("/start/21-1-1", json={"sample_id": "s1", "xml_file": str(tmp_path / "missing.xml")})
     assert r.status_code == 400
 
 
@@ -111,7 +111,7 @@ def test_start_ok(mock_bts, tmp_path: Path) -> None:
     """POST /start returns the start result when the job succeeds."""
     xml_file = tmp_path / "payload.xml"
     xml_file.write_text("hello there")
-    r = client.post("/start/21-1-1", params={"sample_id": "s1", "xml_file": str(xml_file)})
+    r = client.post("/start/21-1-1", json={"sample_id": "s1", "xml_file": str(xml_file)})
     assert r.status_code == 200
     data = r.json()
     assert data[0]["start"] == "ok"
@@ -122,7 +122,7 @@ def test_start_invalid_state(mock_bts, tmp_path: Path) -> None:
     xml_file = tmp_path / "payload.xml"
     xml_file.write_text("hello there")
     # 21-1-2 is "working" in mock data — cannot start
-    r = client.post("/start/21-1-2", params={"sample_id": "s1", "xml_file": str(xml_file)})
+    r = client.post("/start/21-1-2", json={"sample_id": "s1", "xml_file": str(xml_file)})
     assert r.status_code == 400
     assert "Can only start jobs" in r.json()["detail"]
 
@@ -132,7 +132,7 @@ def test_start_false(mock_bts, tmp_path: Path) -> None:
     xml_file = tmp_path / "payload.xml"
     xml_file.write_text("hello there")
     # 21-1-4 produces start=false in mock data
-    r = client.post("/start/21-1-4", params={"sample_id": "s1", "xml_file": str(xml_file)})
+    r = client.post("/start/21-1-4", json={"sample_id": "s1", "xml_file": str(xml_file)})
     assert r.status_code == 200
     assert r.json()[0]["start"] == "false"
 

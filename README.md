@@ -5,7 +5,7 @@
 </br>
 
 [![PyPI version](https://img.shields.io/pypi/v/aurora-neware.svg)](https://pypi.org/project/aurora-neware/)
-[![License](https://img.shields.io/github/license/empaeconversion/aurora-neware?color=blue)](https://github.com/empaeconversion/aurora-neware/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/empaeconversion/aurora-neware/blob/main/LICENSE)
 [![Python Versions](https://img.shields.io/pypi/pyversions/aurora-neware.svg)](https://pypi.org/project/aurora-neware/)
 [![Checks](https://img.shields.io/github/actions/workflow/status/empaeconversion/aurora-neware/CI.yml)](https://github.com/EmpaEconversion/aurora-neware/actions/workflows/CI.yml)
 [![Coverage](https://img.shields.io/codecov/c/github/empaeconversion/aurora-neware)](https://app.codecov.io/gh/EmpaEconversion/aurora-neware)

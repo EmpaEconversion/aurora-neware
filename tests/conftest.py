@@ -1,20 +1,22 @@
 """Fixtures for tests."""
 
-import socket
-
 import pytest
+
+import aurora_neware.neware as _neware_module
 
 from .mocks import FakeSocket
 
 
 @pytest.fixture
 def mock_bts(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Replace socket.socket() with FakeSocket."""
+    """Replace socket.socket() with FakeSocket inside aurora_neware module."""
 
-    def fake_socket() -> FakeSocket:
-        return FakeSocket()
+    class _FakeSocketModule:
+        @staticmethod
+        def socket() -> FakeSocket:
+            return FakeSocket()
 
-    monkeypatch.setattr(socket, "socket", fake_socket)
+    monkeypatch.setattr(_neware_module, "socket", _FakeSocketModule())
 
 
 @pytest.fixture
